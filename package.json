@@ -1,0 +1,11 @@
+{
+  "name": "kiryana-bahi-khata",
+  "version": "1.0.0",
+  "description": "Old-admin friendly Kiryana Store supplier ledger with Hindi/English support",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": ["kiryana", "bahi-khata", "ledger", "retail"],
+  "author": "rishabbatra07",
+  "license": "MIT"
+}
