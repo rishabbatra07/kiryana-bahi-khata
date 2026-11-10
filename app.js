@@ -361,13 +361,30 @@ window.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
 });
 
-// LOAD / SAVE LOCAL STORAGE
-function loadData() {
+// LOAD / SAVE (POSTGRESQL + LOCALSTORAGE FALLBACK)
+async function loadData() {
+  // 1. Try to fetch from PostgreSQL backend
+  try {
+    const res = await fetch('/api/suppliers');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        state.suppliers = json.data;
+        persistData();
+        renderView();
+        console.log(`🐘 Loaded ${state.suppliers.length} suppliers from PostgreSQL (${json.source})`);
+        return;
+      }
+    }
+  } catch (err) {
+    console.log('PostgreSQL API not reachable, falling back to local storage:', err);
+  }
+
+  // 2. Offline fallback to LocalStorage or DEFAULT_SUPPLIERS
   const saved = localStorage.getItem('kiryana_khata_suppliers_v2');
   if (saved) {
     try {
       state.suppliers = JSON.parse(saved);
-      // Auto-ensure Bhatla Agency exists even if older state was saved in browser
       const hasBhatla = state.suppliers.some(s => s.name && (s.name.includes("भाटला") || s.name.includes("Bhatla")));
       if (!hasBhatla) {
         const bhatlaDefault = DEFAULT_SUPPLIERS.find(s => s.id === "sup_bhatla");
@@ -1040,6 +1057,9 @@ function deleteItem(supplierId, itemId) {
     persistData();
     renderView();
     showToast(state.currentLang === 'hi' ? "सामान हटा दिया गया" : "Item deleted");
+
+    // PostgreSQL sync
+    fetch(`/api/items/${itemId}`, { method: 'DELETE' }).catch(err => console.log('Offline/sync error:', err));
   }
 }
 
@@ -1060,6 +1080,9 @@ function deleteSupplier(supplierId) {
     persistData();
     renderView();
     showToast(state.currentLang === 'hi' ? "सप्लायर का खाता हटा दिया गया" : "Supplier deleted");
+
+    // PostgreSQL sync
+    fetch(`/api/suppliers/${supplierId}`, { method: 'DELETE' }).catch(err => console.log('Offline/sync error:', err));
   }
 }
 
@@ -1080,6 +1103,9 @@ function clearWeeklyEntries(supplierId) {
     persistData();
     renderView();
     showToast(state.currentLang === 'hi' ? "इस हफ्ते का हिसाब खाली कर दिया गया" : "Weekly entries reset to 0");
+
+    // PostgreSQL sync
+    fetch(`/api/suppliers/${supplierId}/clear-week`, { method: 'POST' }).catch(err => console.log('Offline/sync error:', err));
   }
 }
 
@@ -1093,10 +1119,16 @@ function deleteHistoryEntry(supplierId, weekLabel) {
     : `Delete record for ${weekLabel}?`;
 
   if (confirm(confirmMsg)) {
+    const toDelete = sup.history.find(h => h.weekLabel === weekLabel);
     sup.history = sup.history.filter(h => h.weekLabel !== weekLabel);
     persistData();
     openSupplierHistory(supplierId);
     showToast(state.currentLang === 'hi' ? "पुराना रिकॉर्ड हटाया गया" : "History record deleted");
+
+    // PostgreSQL sync
+    if (toDelete && toDelete.id) {
+      fetch(`/api/history/${toDelete.id}`, { method: 'DELETE' }).catch(err => console.log('Offline/sync error:', err));
+    }
   }
 }
 
@@ -1135,6 +1167,7 @@ function saveAndPlaySound(supplierId) {
   // Update or insert current week history
   const existingIdx = sup.history.findIndex(h => h.weekLabel === weekLabel);
   const historyEntry = {
+    id: `hist_${supplierId}_${Date.now()}`,
     weekLabel,
     settledDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
     paymentMode: totals.due === 0 ? "PhonePe / UPI" : "नकद (Cash)",
@@ -1157,6 +1190,23 @@ function saveAndPlaySound(supplierId) {
   const t = DICTIONARY[state.currentLang];
   showToast(`${sup.name.split('(')[0].trim()} ${t.confirm_saved_toast} (₹${totals.paid} Paid)`);
   renderView();
+
+  // PostgreSQL sync
+  fetch('/api/settlements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      supplierId,
+      weekLabel,
+      settledDate: historyEntry.settledDate,
+      paymentMode: historyEntry.paymentMode,
+      totalBill: totals.bill,
+      totalPaid: totals.paid,
+      due: totals.due,
+      status: totals.status,
+      items: sup.items
+    })
+  }).catch(err => console.log('Offline/sync error:', err));
 }
 
 // =========================================================================
@@ -1381,6 +1431,13 @@ function saveNewSupplier() {
   state.expandedSupplierId = newSup.id;
   renderView();
 
+  // PostgreSQL sync
+  fetch('/api/suppliers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newSup)
+  }).catch(err => console.log('Offline/sync error:', err));
+
   document.getElementById('new-supplier-name').value = '';
   document.getElementById('new-supplier-phone').value = '';
   document.getElementById('new-supplier-items').value = '';
@@ -1425,14 +1482,23 @@ function confirmAddItem() {
   const sup = state.suppliers.find(s => s.id === state.activeSupplierForAddItem);
   if (!sup) return;
 
-  sup.items.push({
+  const itmObj = {
     id: `itm_${Date.now()}`,
     name: val,
     rate: 0,
     paid: 0
-  });
+  };
+
+  sup.items.push(itmObj);
 
   persistData();
   closeAddItemModal();
   renderView();
+
+  // PostgreSQL sync
+  fetch(`/api/suppliers/${sup.id}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: val })
+  }).catch(err => console.log('Offline/sync error:', err));
 }
