@@ -644,6 +644,86 @@ function getSupplierTotals(supplier) {
   return { itemsTotal, freight, bill, paid, due, status };
 }
 
+// GET ALL DISTINCT INVOICES PRESERVED FOR A SUPPLIER
+function getUniqueSupplierBills(supplier) {
+  if (!supplier) return [];
+  const activeInv = String(supplier.invoiceNo || '').trim().toLowerCase();
+  const seen = new Set();
+  if (activeInv) seen.add(activeInv);
+
+  const list = [];
+  (supplier.history || []).forEach(h => {
+    const inv = String(h.invoiceNo || '').trim();
+    const invKey = inv.toLowerCase();
+    if (inv && !seen.has(invKey)) {
+      seen.add(invKey);
+      list.push(h);
+    }
+  });
+  return list;
+}
+
+// SWITCH ACTIVE INVOICE FOR A SUPPLIER INSTANTLY WITHOUT LOSING ANY BILL
+function switchActiveBill(supplierId, targetInvoiceNo) {
+  const sup = state.suppliers.find(s => s.id === supplierId);
+  if (!sup || !sup.history) return;
+
+  const targetIdx = sup.history.findIndex(h => String(h.invoiceNo).trim().toLowerCase() === String(targetInvoiceNo).trim().toLowerCase());
+  if (targetIdx === -1) return;
+
+  const targetBill = sup.history[targetIdx];
+
+  // 1. Snapshot current active bill into history before switching
+  const totals = getSupplierTotals(sup);
+  const currentEntry = {
+    id: `hist_${supplierId}_${Date.now()}`,
+    invoiceNo: sup.invoiceNo || 'INV-' + Math.floor(1000 + Math.random() * 9000),
+    invoiceDate: sup.invoiceDate || new Date().toISOString().split('T')[0],
+    paymentDate: sup.paymentDate || '',
+    freight: sup.freight || 0,
+    weekLabel: targetBill.weekLabel || 'Current Week',
+    settledDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    paymentMode: sup.paymentMode || 'PhonePe / UPI',
+    totalBill: totals.bill,
+    totalPaid: totals.paid,
+    due: totals.due,
+    status: totals.status,
+    items: (sup.items || []).map(i => ({ ...i }))
+  };
+
+  // 2. Remove target from history
+  sup.history.splice(targetIdx, 1);
+
+  // 3. Add current active bill into history (remove any prior duplicate of current invoice)
+  sup.history = sup.history.filter(h => String(h.invoiceNo).trim().toLowerCase() !== String(currentEntry.invoiceNo).trim().toLowerCase());
+  if (currentEntry.invoiceNo || (currentEntry.items && currentEntry.items.length > 0)) {
+    sup.history.unshift(currentEntry);
+  }
+
+  // 4. Set target bill as active
+  sup.invoiceNo = targetBill.invoiceNo;
+  sup.invoiceDate = targetBill.invoiceDate;
+  sup.freight = targetBill.freight || 0;
+  sup.paidAmount = targetBill.totalPaid || 0;
+  sup.paymentDate = targetBill.paymentDate || '';
+  sup.paymentMode = targetBill.paymentMode || 'PhonePe / UPI';
+  sup.items = (targetBill.items || []).map(i => ({ ...i }));
+
+  state.expandedSupplierId = sup.id;
+  persistData();
+  renderView();
+
+  // Sync to server
+  fetch('/api/suppliers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sup)
+  }).catch(err => console.log('Offline/sync error:', err));
+
+  playSoundboxChime(sup.name.split('(')[0].trim(), sup.paidAmount);
+  showToast(`बिल #${targetBill.invoiceNo} खोला गया (${targetBill.invoiceDate || ''})`);
+}
+
 // MAIN RENDER
 function renderView() {
   const t = DICTIONARY[state.currentLang];
@@ -756,6 +836,7 @@ function renderDesktopTable(suppliersList) {
       statusBadge = `<span class="px-3 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-full font-bold text-sm">🔴 ${t.status_unpaid}</span>`;
     }
 
+    const otherBills = getUniqueSupplierBills(sup);
     const itemsPreview = (sup.items || []).map(i => i.description.split('(')[0].trim()).slice(0, 3).join(', ') + ((sup.items || []).length > 3 ? '...' : '');
 
     const tr = document.createElement('tr');
@@ -771,9 +852,15 @@ function renderDesktopTable(suppliersList) {
         <div class="flex items-center gap-2">
           <span class="text-lg hover:text-rose-900 transition" onclick="toggleExpandSupplier('${sup.id}')">${sup.name}</span>
         </div>
-        <div class="flex flex-wrap items-center gap-2 mt-1 text-xs">
-          <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-900 font-bold">📄 ${sup.invoiceNo || 'No Inv #'}</span>
+        <div class="flex flex-wrap items-center gap-1.5 mt-1 text-xs">
+          <span class="px-2 py-0.5 rounded bg-rose-900 text-white font-black shadow-xs">📄 चालू बिल #${sup.invoiceNo || 'N/A'}</span>
           <span class="text-gray-500 font-semibold">📅 ${sup.invoiceDate || 'No date'}</span>
+          ${otherBills.map(h => `
+            <button type="button" onclick="event.stopPropagation(); switchActiveBill('${sup.id}', '${h.invoiceNo}')" title="बिल #${h.invoiceNo} पर स्विच करें" class="px-2 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold border border-amber-300 transition flex items-center gap-1 shadow-xs">
+              <i data-lucide="history" class="w-3 h-3 text-amber-800"></i>
+              <span>बिल #${h.invoiceNo} (₹${(h.totalBill || 0).toLocaleString('en-IN')})</span>
+            </button>
+          `).join('')}
           <span class="text-gray-400">•</span>
           <span class="text-gray-600 font-semibold">📞 ${sup.phone}</span>
         </div>
@@ -831,6 +918,32 @@ function renderDesktopTable(suppliersList) {
         <td colspan="7" class="p-5">
           <div class="bg-white rounded-2xl p-5 shadow-inner border border-amber-200 space-y-4">
             
+            <!-- MULTI-BILL SELECTOR TABS -->
+            <div class="flex flex-wrap items-center justify-between gap-2.5 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-xl">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-black text-amber-950 uppercase flex items-center gap-1">
+                  <i data-lucide="layers" class="w-4 h-4 text-amber-800"></i>
+                  इस सप्लायर के बिल (Invoices):
+                </span>
+                <!-- Active Bill Tab -->
+                <button type="button" class="px-3 py-1.5 bg-rose-900 text-white rounded-xl text-xs font-black shadow flex items-center gap-1.5 cursor-default">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                  <span>बिल #${sup.invoiceNo} (चालू)</span>
+                </button>
+                <!-- Other Invoices Tabs -->
+                ${otherBills.map(h => `
+                  <button type="button" onclick="switchActiveBill('${sup.id}', '${h.invoiceNo}')" title="बिल #${h.invoiceNo} खोलें" class="px-3 py-1.5 bg-white hover:bg-amber-100 text-gray-800 hover:text-amber-950 border border-gray-300 hover:border-amber-400 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="history" class="w-3.5 h-3.5 text-amber-700"></i>
+                    <span>बिल #${h.invoiceNo} (${h.invoiceDate ? h.invoiceDate.slice(5) : ''}) - ₹${(h.totalBill || 0).toLocaleString('en-IN')}</span>
+                  </button>
+                `).join('')}
+              </div>
+              <button type="button" onclick="openAddBillModal('${sup.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black shadow flex items-center gap-1.5 transition">
+                <i data-lucide="file-plus" class="w-3.5 h-3.5"></i>
+                <span>+ नया बिल दर्ज करें</span>
+              </button>
+            </div>
+
             <!-- INVOICE HEADER BAR -->
             <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl">
               <div class="flex flex-wrap items-center gap-4">
@@ -1114,6 +1227,43 @@ function renderDesktopTable(suppliersList) {
 
             </div>
 
+            <!-- OTHER PRESERVED INVOICES LIST -->
+            ${otherBills.length > 0 ? `
+              <div class="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span class="text-xs font-black text-gray-800 uppercase flex items-center gap-1.5">
+                    <i data-lucide="folder-clock" class="w-4 h-4 text-amber-800"></i>
+                    इस सप्लायर के अन्य सुरक्षित बिल (${otherBills.length}):
+                  </span>
+                  <span class="text-[11px] text-gray-500 font-bold">किसी भी बिल को देखने या बदलने के लिए 'यह बिल खोलें' दबाएं</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  ${otherBills.map(h => `
+                    <div class="p-3 bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-between gap-3">
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <strong class="text-sm font-black text-gray-900">📄 बिल #${h.invoiceNo}</strong>
+                          <span class="text-xs text-gray-500 font-bold">(${h.invoiceDate || 'N/A'})</span>
+                        </div>
+                        <div class="text-xs text-gray-600 font-semibold mt-0.5">
+                          कुल: <strong class="text-gray-900">₹${(h.totalBill || 0).toLocaleString('en-IN')}</strong> | 
+                          चुकाया: <strong class="text-emerald-700">₹${(h.totalPaid || 0).toLocaleString('en-IN')}</strong> | 
+                          बाकी: <strong class="text-rose-700">₹${(h.due || 0).toLocaleString('en-IN')}</strong>
+                        </div>
+                        <div class="text-[11px] text-gray-500 truncate max-w-xs mt-0.5">
+                          सामान: ${(h.items || []).map(i => i.description).slice(0, 2).join(', ')}${(h.items || []).length > 2 ? '...' : ''}
+                        </div>
+                      </div>
+                      <button type="button" onclick="switchActiveBill('${sup.id}', '${h.invoiceNo}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 hover:text-rose-950 border border-rose-300 rounded-xl text-xs font-black transition shrink-0 flex items-center gap-1">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                        <span>यह बिल खोलें</span>
+                      </button>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
           </div>
         </td>
       `;
@@ -1132,6 +1282,7 @@ function renderMobileCards(suppliersList) {
     const totals = getSupplierTotals(sup);
     const { itemsTotal, freight, bill, paid, due, status } = totals;
     const isExpanded = state.expandedSupplierId === sup.id;
+    const otherBills = getUniqueSupplierBills(sup);
 
     const card = document.createElement('div');
     card.className = `p-4 rounded-2xl border-2 transition ${isExpanded ? 'bg-amber-50/60 border-rose-600 shadow-md' : 'bg-white border-gray-200'}`;
@@ -1145,6 +1296,16 @@ function renderMobileCards(suppliersList) {
             <span>${sup.invoiceDate || 'No date'}</span> • 
             <span class="text-rose-700">${sup.settlementDay}</span>
           </p>
+          ${otherBills.length > 0 ? `
+            <div class="flex flex-wrap items-center gap-1 mt-1.5">
+              <span class="text-[10px] text-gray-500 font-bold">अन्य बिल:</span>
+              ${otherBills.map(h => `
+                <button type="button" onclick="event.stopPropagation(); switchActiveBill('${sup.id}', '${h.invoiceNo}')" class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-950 font-bold text-[10px] border border-amber-300">
+                  #${h.invoiceNo} (₹${(h.totalBill || 0).toLocaleString('en-IN')})
+                </button>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
         <span class="text-xs font-black px-2.5 py-1 rounded-full ${status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : status === 'PARTIAL' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}">
           ${status === 'PAID' ? 'चुकता' : `₹ ${due} बाकी`}
@@ -1192,6 +1353,19 @@ function renderMobileCards(suppliersList) {
         <!-- Mobile Expand Sheet -->
         <div class="mt-4 pt-3 border-t space-y-3">
           
+          <!-- Mobile Bill Tabs -->
+          <div class="flex flex-wrap items-center gap-1.5 p-2 bg-amber-50 rounded-xl border border-amber-200">
+            <span class="text-[10px] font-black text-amber-900 uppercase">बिल चुनें:</span>
+            <button class="px-2 py-1 bg-rose-900 text-white rounded-lg text-xs font-black">
+              #${sup.invoiceNo} (चालू)
+            </button>
+            ${otherBills.map(h => `
+              <button onclick="switchActiveBill('${sup.id}', '${h.invoiceNo}')" class="px-2 py-1 bg-white hover:bg-amber-100 text-amber-950 border border-amber-300 rounded-lg text-xs font-bold shadow-xs">
+                #${h.invoiceNo} (₹${(h.totalBill || 0).toLocaleString('en-IN')})
+              </button>
+            `).join('')}
+          </div>
+
           <!-- Invoice inputs in mobile -->
           <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-xl border border-gray-200">
             <div>
@@ -1704,6 +1878,10 @@ function openSupplierHistory(supplierId) {
             <span class="text-xs font-black px-2.5 py-1 rounded-full ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
               ${isPaid ? '🟢 पूरा चुकता (Paid)' : `🔴 ₹${rec.due} बकाया (Due)`}
             </span>
+            <button onclick="switchActiveBill('${supplierId}', '${rec.invoiceNo}'); closeSupplierHistoryModal();" class="px-2.5 py-1 bg-rose-900 hover:bg-rose-800 text-white rounded-lg text-xs font-black flex items-center gap-1 shadow-sm transition" title="इस बिल को मुख्य टेबल में खोलें और सामान देखें/बदलें">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              <span>यह बिल खोलें</span>
+            </button>
             <button onclick="deleteHistoryEntry('${supplierId}', '${rec.weekLabel}')" title="यह रिकॉर्ड हटाएं" class="text-gray-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
@@ -1940,6 +2118,7 @@ function confirmAddNewBill() {
     };
 
     if (!sup.history) sup.history = [];
+    sup.history = sup.history.filter(h => String(h.invoiceNo).trim().toLowerCase() !== String(historyEntry.invoiceNo).trim().toLowerCase());
     sup.history.unshift(historyEntry);
 
     // Sync settlement archive to backend

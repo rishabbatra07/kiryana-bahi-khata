@@ -238,9 +238,9 @@
     "settlementDay": "शनिवार (Saturday)",
     "invoiceNo": "896",
     "invoiceDate": "2026-10-30",
-    "paymentDate": "",
+    "paymentDate": "2026-11-02",
     "freight": 225,
-    "paidAmount": 0,
+    "paidAmount": 20000,
     "paymentMode": "PhonePe / UPI",
     "items": [
       {
@@ -276,90 +276,19 @@
     ],
     "history": [
       {
-        "id": "hist_1794409347761",
-        "invoiceNo": "896",
-        "invoiceDate": "2026-10-30",
-        "paymentDate": "11 Nov 2026",
-        "freight": 225,
-        "weekLabel": "09 Nov 2026 - 15 Nov 2026",
-        "settledDate": "11 Nov 2026",
+        "id": "hist_se_852",
+        "invoiceNo": "852",
+        "invoiceDate": "2026-10-23",
+        "paymentDate": "",
+        "freight": 180,
+        "weekLabel": "19 Oct - 25 Oct 2026",
+        "settledDate": "23 Oct 2026",
         "paymentMode": "PhonePe / UPI",
-        "totalBill": 36125,
+        "totalBill": 180,
         "totalPaid": 0,
-        "due": 36125,
+        "due": 180,
         "status": "UNPAID",
-        "items": [
-          {
-            "id": "itm_se_1",
-            "description": "Mustard Oil 15 Kg Tin First",
-            "hsnCode": "15149120",
-            "quantity": "5 TIN",
-            "rateWoGst": 2761.9,
-            "gstPercent": 5,
-            "rateWithGst": 2900,
-            "totalAmount": 14500
-          },
-          {
-            "id": "itm_se_2",
-            "description": "Refind Soya Oil 15 Kg Tin First",
-            "hsnCode": "15079010",
-            "quantity": "5 TIN",
-            "rateWoGst": 2361.9,
-            "gstPercent": 5,
-            "rateWithGst": 2480,
-            "totalAmount": 12400
-          },
-          {
-            "id": "itm_se_3",
-            "description": "Stay Fit Soya Ref 1 Litre Pouch(1*12pics)",
-            "hsnCode": "15079010",
-            "quantity": "60 PCS (5 Box)",
-            "rateWoGst": 142.86,
-            "gstPercent": 5,
-            "rateWithGst": 150,
-            "totalAmount": 9000
-          }
-        ]
-      },
-      {
-        "id": "hist_se_1",
-        "invoiceNo": "896",
-        "invoiceDate": "2026-10-30",
-        "paymentDate": "2026-11-02",
-        "freight": 225,
-        "weekLabel": "27 Oct - 02 Nov 2026",
-        "settledDate": "02 Nov 2026",
-        "paymentMode": "PhonePe / UPI",
-        "totalBill": 36125,
-        "totalPaid": 20000,
-        "due": 16125,
-        "status": "PARTIAL",
-        "items": [
-          {
-            "description": "Mustard Oil 15 Kg Tin First",
-            "quantity": "5 TIN",
-            "rateWoGst": 2761.9,
-            "gstPercent": 5,
-            "rateWithGst": 2900,
-            "totalAmount": 14500
-          },
-          {
-            "description": "Refind Soya Oil 15 Kg Tin First",
-            "quantity": "5 TIN",
-            "rateWoGst": 2361.9,
-            "gstPercent": 5,
-            "rateWithGst": 2480,
-            "totalAmount": 12400
-          },
-          {
-            "description": "Stay Fit Soya Ref 1L Pouch",
-            "quantity": "60 PCS",
-            "rateWoGst": 142.86,
-            "gstPercent": 5,
-            "rateWithGst": 150,
-            "totalAmount": 9000
-          }
-        ]
+        "items": []
       }
     ]
   }
