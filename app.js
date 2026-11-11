@@ -17,6 +17,7 @@ const DEFAULT_SUPPLIERS = [
     settlementDay: "शुक्रवार (Friday)",
     invoiceNo: "INV-8841",
     invoiceDate: "2026-11-10",
+    paymentDate: "2026-11-11",
     paidAmount: 9000,
     paymentMode: "PhonePe / UPI",
     items: [
@@ -50,6 +51,7 @@ const DEFAULT_SUPPLIERS = [
         id: "hist_b_1",
         invoiceNo: "INV-8210",
         invoiceDate: "2026-11-03",
+        paymentDate: "2026-10-31",
         weekLabel: "27 Oct - 02 Nov 2026",
         settledDate: "31 Oct 2026",
         paymentMode: "PhonePe / UPI",
@@ -72,6 +74,7 @@ const DEFAULT_SUPPLIERS = [
     settlementDay: "मंगलवार (Tuesday)",
     invoiceNo: "SR-4092",
     invoiceDate: "2026-11-09",
+    paymentDate: "2026-11-10",
     paidAmount: 15000,
     paymentMode: "PhonePe / UPI",
     items: [
@@ -97,6 +100,7 @@ const DEFAULT_SUPPLIERS = [
         id: "hist_1_1",
         invoiceNo: "SR-3920",
         invoiceDate: "2026-11-02",
+        paymentDate: "2026-11-02",
         weekLabel: "27 Oct - 02 Nov 2026",
         settledDate: "02 Nov 2026",
         paymentMode: "PhonePe / UPI",
@@ -118,6 +122,7 @@ const DEFAULT_SUPPLIERS = [
     settlementDay: "शनिवार (Saturday)",
     invoiceNo: "ML-1102",
     invoiceDate: "2026-11-08",
+    paymentDate: "2026-11-09",
     paidAmount: 20000,
     paymentMode: "चेक (Cheque)",
     items: [
@@ -151,6 +156,7 @@ const DEFAULT_SUPPLIERS = [
         id: "hist_2_1",
         invoiceNo: "ML-1044",
         invoiceDate: "2026-11-01",
+        paymentDate: "2026-11-01",
         weekLabel: "27 Oct - 02 Nov 2026",
         settledDate: "01 Nov 2026",
         paymentMode: "चेक (Cheque)",
@@ -162,6 +168,71 @@ const DEFAULT_SUPPLIERS = [
           { description: "चक्की आटा बोरी", quantity: "5 बोरी", rateWoGst: 1600, gstPercent: 0, totalAmount: 8000 },
           { description: "अरहर दाल बोरी", quantity: "3 बोरी", rateWoGst: 4000, gstPercent: 0, totalAmount: 12000 },
           { description: "बासमती चावल", quantity: "3 कट्टा", rateWoGst: 2540, gstPercent: 5, totalAmount: 8000 }
+        ]
+      }
+    ]
+  },
+  {
+    id: "sup_1794330750456",
+    name: "एस ई ट्रेडिंग कं (S E TRADING CO - Ekansh)",
+    phone: "8218612919",
+    settlementDay: "शनिवार (Saturday)",
+    invoiceNo: "896",
+    invoiceDate: "2026-10-30",
+    paymentDate: "2026-11-02",
+    freight: 225,
+    paidAmount: 20000,
+    paymentMode: "PhonePe / UPI",
+    items: [
+      {
+        id: "itm_se_1",
+        description: "Mustard Oil 15 Kg Tin First",
+        hsnCode: "15149120",
+        quantity: "5 TIN",
+        rateWoGst: 2761.90,
+        gstPercent: 5,
+        rateWithGst: 2900,
+        totalAmount: 14500
+      },
+      {
+        id: "itm_se_2",
+        description: "Refind Soya Oil 15 Kg Tin First",
+        hsnCode: "15079010",
+        quantity: "5 TIN",
+        rateWoGst: 2361.90,
+        gstPercent: 5,
+        rateWithGst: 2480,
+        totalAmount: 12400
+      },
+      {
+        id: "itm_se_3",
+        description: "Stay Fit Soya Ref 1 Litre Pouch(1*12pics)",
+        hsnCode: "15079010",
+        quantity: "60 PCS (5 Box)",
+        rateWoGst: 142.86,
+        gstPercent: 5,
+        rateWithGst: 150,
+        totalAmount: 9000
+      }
+    ],
+    history: [
+      {
+        id: "hist_se_1",
+        invoiceNo: "896",
+        invoiceDate: "2026-10-30",
+        paymentDate: "2026-11-02",
+        freight: 225,
+        weekLabel: "27 Oct - 02 Nov 2026",
+        settledDate: "02 Nov 2026",
+        paymentMode: "PhonePe / UPI",
+        totalBill: 36125,
+        totalPaid: 20000,
+        due: 16125,
+        status: "PARTIAL",
+        items: [
+          { description: "Mustard Oil 15 Kg Tin First", quantity: "5 TIN", rateWoGst: 2761.90, gstPercent: 5, rateWithGst: 2900, totalAmount: 14500 },
+          { description: "Refind Soya Oil 15 Kg Tin First", quantity: "5 TIN", rateWoGst: 2361.90, gstPercent: 5, rateWithGst: 2480, totalAmount: 12400 },
+          { description: "Stay Fit Soya Ref 1L Pouch", quantity: "60 PCS", rateWoGst: 142.86, gstPercent: 5, rateWithGst: 150, totalAmount: 9000 }
         ]
       }
     ]
@@ -205,6 +276,8 @@ const DICTIONARY = {
     th_items: "सामान विवरण (Goods Description)",
     th_bill: "कुल बिल (Bill)",
     th_paid: "चुकाया (Paid)",
+    th_paid_date: "भुगतान तारीख (Payment Date)",
+    label_payment_date: "भुगतान की तारीख (Date of Payment)",
     th_due: "बकाया (Due)",
     th_status: "स्थिति (Status)",
     th_action: "हिसाब (Action)",
@@ -249,6 +322,8 @@ const DICTIONARY = {
     th_items: "Description of Goods",
     th_bill: "Total Bill",
     th_paid: "Paid",
+    th_paid_date: "Payment Date",
+    label_payment_date: "Date of Payment",
     th_due: "Due Balance",
     th_status: "Status",
     th_action: "Action",
@@ -274,7 +349,7 @@ let state = {
   filter: 'ALL',       // 'ALL', 'DUE', 'PAID'
   searchQuery: '',
   weekOffset: 0,
-  expandedSupplierId: "sup_bhatla", // expanded by default for easy review
+  expandedSupplierId: "sup_1794330750456", // expanded on Ekansh Traders (S E Trading Co) by default
   activeSupplierForAddItem: null,
   activeSupplierForHistory: null,
   suppliers: []
@@ -311,9 +386,11 @@ function recoverAndMergeCustomSuppliers(currentList) {
                 const recoveredItems = (oldSup.items || []).map((it, idx) => ({
                   id: it.id || `itm_${Date.now()}_${idx}`,
                   description: it.description || it.name || 'किराना सामान',
+                  hsnCode: it.hsnCode || '',
                   quantity: it.quantity || '1',
                   rateWoGst: it.rateWoGst || it.rate || 0,
                   gstPercent: it.gstPercent !== undefined ? it.gstPercent : 5,
+                  rateWithGst: it.rateWithGst || 0,
                   totalAmount: it.totalAmount || it.rate || 0
                 }));
 
@@ -324,6 +401,8 @@ function recoverAndMergeCustomSuppliers(currentList) {
                   settlementDay: oldSup.settlementDay || 'शनिवार (Saturday)',
                   invoiceNo: oldSup.invoiceNo || 'INV-' + Math.floor(1000 + Math.random() * 9000),
                   invoiceDate: oldSup.invoiceDate || new Date().toISOString().split('T')[0],
+                  paymentDate: oldSup.paymentDate || (oldSup.paidAmount > 0 ? (oldSup.invoiceDate || new Date().toISOString().split('T')[0]) : ''),
+                  freight: oldSup.freight || 0,
                   paidAmount: oldSup.paidAmount || 0,
                   paymentMode: oldSup.paymentMode || 'PhonePe / UPI',
                   items: recoveredItems,
@@ -545,12 +624,14 @@ function parseQuantityNum(qtyStr) {
   return match ? parseFloat(match[0]) : 1;
 }
 
-// TOTAL CALCULATION PER SUPPLIER
+// TOTAL CALCULATION PER SUPPLIER (ITEMS TOTAL + FREIGHT = GRAND TOTAL)
 function getSupplierTotals(supplier) {
-  let bill = 0;
+  let itemsTotal = 0;
   (supplier.items || []).forEach(item => {
-    bill += Number(item.totalAmount) || 0;
+    itemsTotal += Number(item.totalAmount) || 0;
   });
+  const freight = Number(supplier.freight) || 0;
+  const bill = itemsTotal + freight;
   const paid = Number(supplier.paidAmount) || 0;
   const due = Math.max(0, bill - paid);
 
@@ -558,7 +639,7 @@ function getSupplierTotals(supplier) {
   if (bill > 0 && paid === 0) status = 'UNPAID';
   else if (due > 0) status = 'PARTIAL';
 
-  return { bill, paid, due, status };
+  return { itemsTotal, freight, bill, paid, due, status };
 }
 
 // MAIN RENDER
@@ -703,7 +784,13 @@ function renderDesktopTable(suppliersList) {
         ₹ ${bill.toLocaleString('en-IN')}
       </td>
       <td class="py-4 px-4 text-right font-black text-emerald-700 text-lg">
-        ₹ ${paid.toLocaleString('en-IN')}
+        <div>₹ ${paid.toLocaleString('en-IN')}</div>
+        ${paid > 0 && sup.paymentDate ? `
+          <div class="text-[11px] font-bold text-emerald-800 flex items-center justify-end gap-1 mt-0.5">
+            <i data-lucide="calendar-check-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>${sup.paymentDate}</span>
+          </div>
+        ` : (paid === 0 ? `<div class="text-[11px] text-gray-400 font-normal">भुगतान बाकी</div>` : '')}
       </td>
       <td class="py-4 px-4 text-right font-black text-rose-700 text-lg">
         ₹ ${due.toLocaleString('en-IN')}
@@ -781,17 +868,19 @@ function renderDesktopTable(suppliersList) {
               </div>
             </div>
 
-            <!-- ITEMIZED TABLE WITH QUANTITY, RATE WO GST, GST%, TOTAL AMOUNT -->
+            <!-- ITEMIZED TABLE WITH QUANTITY, RATE WO GST, GST%, RATE WITH GST, TOTAL AMOUNT -->
             <div class="overflow-x-auto">
               <table class="w-full text-left">
                 <thead>
                   <tr class="text-xs uppercase text-gray-600 font-extrabold border-b bg-gray-50/80">
                     <th class="py-2.5 px-3">सामान का विवरण (Description of Goods)</th>
-                    <th class="py-2.5 px-3 w-32">मात्रा (Quantity)</th>
-                    <th class="py-2.5 px-3 w-36">रेट बिना GST (Rate Wo GST)</th>
-                    <th class="py-2.5 px-3 w-32">GST दर (Rate GST)</th>
-                    <th class="py-2.5 px-3 w-36 text-right">कुल रकम (Total Amount ₹)</th>
-                    <th class="py-2.5 px-2 text-center w-16">हटाएं</th>
+                    <th class="py-2.5 px-2 w-24">HSN कोड</th>
+                    <th class="py-2.5 px-2 w-28">मात्रा (Qty)</th>
+                    <th class="py-2.5 px-2 w-28">रेट बिना GST</th>
+                    <th class="py-2.5 px-2 w-24">GST %</th>
+                    <th class="py-2.5 px-2 w-28">रेट GST सहित</th>
+                    <th class="py-2.5 px-3 w-32 text-right">रकम (Amount ₹)</th>
+                    <th class="py-2.5 px-2 text-center w-12">हटाएं</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-sm font-semibold">
@@ -805,48 +894,71 @@ function renderDesktopTable(suppliersList) {
                           class="w-full px-2 py-1.5 border border-gray-300 rounded-lg font-bold text-gray-900 focus:outline-none focus:border-rose-600 text-base"
                         >
                       </td>
-                      <td class="py-2.5 px-3">
+                      <td class="py-2.5 px-2">
+                        <input 
+                          type="text" 
+                          value="${item.hsnCode || ''}" 
+                          placeholder="उदा. 1507"
+                          oninput="updateItemField('${sup.id}', '${item.id}', 'hsnCode', this.value)"
+                          class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-mono text-gray-700 focus:outline-none focus:border-rose-600"
+                        >
+                      </td>
+                      <td class="py-2.5 px-2">
                         <input 
                           type="text" 
                           value="${item.quantity || '1'}" 
-                          placeholder="10 पेटी / 5"
+                          placeholder="5 TIN / 60"
                           oninput="updateItemField('${sup.id}', '${item.id}', 'quantity', this.value)"
-                          class="w-full px-2 py-1.5 border border-gray-300 rounded-lg font-bold text-gray-800 focus:outline-none focus:border-rose-600"
+                          class="w-full px-2 py-1.5 border border-gray-300 rounded-lg font-bold text-gray-800 focus:outline-none focus:border-rose-600 text-sm"
                         >
                       </td>
-                      <td class="py-2.5 px-3">
+                      <td class="py-2.5 px-2">
                         <div class="relative">
-                          <span class="absolute left-2.5 top-1.5 text-gray-400 font-bold">₹</span>
+                          <span class="absolute left-1.5 top-1.5 text-gray-400 font-bold text-xs">₹</span>
                           <input 
                             type="number" 
+                            step="any"
                             value="${item.rateWoGst || ''}" 
                             placeholder="0"
                             oninput="updateItemField('${sup.id}', '${item.id}', 'rateWoGst', this.value)"
-                            class="w-full pl-6 pr-2 py-1.5 border border-gray-300 rounded-lg font-black text-gray-900 focus:outline-none focus:border-rose-600"
+                            class="w-full pl-5 pr-1 py-1.5 border border-gray-300 rounded-lg font-black text-gray-900 focus:outline-none focus:border-rose-600 text-sm"
                           >
                         </div>
                       </td>
-                      <td class="py-2.5 px-3">
+                      <td class="py-2.5 px-2">
                         <select 
                           onchange="updateItemField('${sup.id}', '${item.id}', 'gstPercent', this.value)"
-                          class="w-full px-2 py-1.5 border border-gray-300 rounded-lg font-bold bg-white focus:outline-none focus:border-rose-600 text-xs"
+                          class="w-full px-1 py-1.5 border border-gray-300 rounded-lg font-bold bg-white focus:outline-none focus:border-rose-600 text-xs"
                         >
-                          <option value="0" ${item.gstPercent == 0 ? 'selected' : ''}>0% (Nil)</option>
-                          <option value="5" ${item.gstPercent == 5 ? 'selected' : ''}>5% GST</option>
-                          <option value="12" ${item.gstPercent == 12 ? 'selected' : ''}>12% GST</option>
-                          <option value="18" ${item.gstPercent == 18 ? 'selected' : ''}>18% GST</option>
-                          <option value="28" ${item.gstPercent == 28 ? 'selected' : ''}>28% GST</option>
+                          <option value="0" ${item.gstPercent == 0 ? 'selected' : ''}>0%</option>
+                          <option value="5" ${item.gstPercent == 5 ? 'selected' : ''}>5%</option>
+                          <option value="12" ${item.gstPercent == 12 ? 'selected' : ''}>12%</option>
+                          <option value="18" ${item.gstPercent == 18 ? 'selected' : ''}>18%</option>
+                          <option value="28" ${item.gstPercent == 28 ? 'selected' : ''}>28%</option>
                         </select>
+                      </td>
+                      <td class="py-2.5 px-2">
+                        <div class="relative">
+                          <span class="absolute left-1.5 top-1.5 text-emerald-600 font-bold text-xs">₹</span>
+                          <input 
+                            type="number" 
+                            step="any"
+                            value="${item.rateWithGst || (item.rateWoGst ? Math.round(item.rateWoGst * (1 + (item.gstPercent || 0)/100) * 100)/100 : '')}" 
+                            placeholder="0"
+                            oninput="updateItemField('${sup.id}', '${item.id}', 'rateWithGst', this.value)"
+                            class="w-full pl-5 pr-1 py-1.5 border border-emerald-300 bg-emerald-50/30 rounded-lg font-black text-emerald-900 focus:outline-none focus:border-emerald-600 text-sm"
+                          >
+                        </div>
                       </td>
                       <td class="py-2.5 px-3 text-right">
                         <div class="relative">
-                          <span class="absolute left-2.5 top-1.5 text-gray-400 font-bold">₹</span>
+                          <span class="absolute left-2 top-1.5 text-gray-400 font-bold text-xs">₹</span>
                           <input 
                             type="number" 
                             value="${item.totalAmount || ''}" 
                             placeholder="0"
                             oninput="updateItemField('${sup.id}', '${item.id}', 'totalAmount', this.value, true)"
-                            class="w-full pl-6 pr-2 py-1.5 border border-rose-300 bg-rose-50/30 rounded-lg font-black text-rose-950 text-right focus:outline-none focus:border-rose-600 text-base"
+                            class="w-full pl-5 pr-2 py-1.5 border border-rose-300 bg-rose-50/30 rounded-lg font-black text-rose-950 text-right focus:outline-none focus:border-rose-600 text-base"
                           >
                         </div>
                       </td>
@@ -865,10 +977,34 @@ function renderDesktopTable(suppliersList) {
             <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-4">
                 
-                <!-- Total Bill Display -->
-                <div>
-                  <span class="text-xs font-bold text-gray-600 uppercase block">कुल बिल रकम (Total Bill Amount):</span>
-                  <span class="text-2xl font-black text-gray-900">₹ ${bill.toLocaleString('en-IN')}</span>
+                <!-- Subtotal and Freight Breakdown -->
+                <div class="flex flex-wrap items-center gap-4">
+                  <div>
+                    <span class="text-xs font-bold text-gray-600 uppercase block">सामान कुल (Subtotal):</span>
+                    <span class="text-lg font-black text-gray-800">₹ ${(totals.itemsTotal || 0).toLocaleString('en-IN')}</span>
+                  </div>
+
+                  <!-- Freight / Carriage Input -->
+                  <div>
+                    <label class="block text-xs font-bold text-amber-900 uppercase">
+                      🚚 भाड़ा / ढुलाई (Freight):
+                    </label>
+                    <div class="relative mt-1">
+                      <span class="absolute left-2.5 top-1.5 text-amber-700 font-bold">₹</span>
+                      <input 
+                        type="number" 
+                        value="${sup.freight || ''}" 
+                        placeholder="0"
+                        oninput="updateSupplierFreight('${sup.id}', this.value)"
+                        class="pl-6 pr-2 py-1.5 bg-white border border-amber-400 rounded-lg font-black text-amber-950 text-base w-28 focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-sm"
+                      >
+                    </div>
+                  </div>
+
+                  <div>
+                    <span class="text-xs font-bold text-gray-700 uppercase block">कुल इनवॉइस बिल (Grand Total):</span>
+                    <span class="text-2xl font-black text-gray-900">₹ ${bill.toLocaleString('en-IN')}</span>
+                  </div>
                 </div>
 
                 <!-- Lump-Sum Weekly Paid Input -->
@@ -905,9 +1041,24 @@ function renderDesktopTable(suppliersList) {
                   </div>
                 </div>
 
+                <!-- Payment Date Input -->
+                <div>
+                  <label class="block text-xs font-bold text-emerald-900 uppercase">
+                    📅 भुगतान तारीख (Payment Date):
+                  </label>
+                  <div class="relative mt-1">
+                    <input 
+                      type="date" 
+                      value="${sup.paymentDate || ''}" 
+                      onchange="updateSupplierPaymentDate('${sup.id}', this.value)"
+                      class="px-3 py-2 bg-white border-2 border-emerald-500 rounded-xl font-bold text-emerald-950 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm"
+                    >
+                  </div>
+                </div>
+
                 <!-- Payment Mode Radio -->
                 <div>
-                  <span class="text-xs font-bold text-gray-600 uppercase block mb-1">भुगतान का माध्यम (Mode):</span>
+                  <span class="text-xs font-bold text-gray-600 uppercase block mb-1">माध्यम (Mode):</span>
                   <div class="flex items-center gap-2 text-xs font-bold bg-white p-1.5 rounded-xl border border-gray-200">
                     <label class="flex items-center gap-1 cursor-pointer">
                       <input type="radio" name="mode_${sup.id}" value="PhonePe / UPI" ${sup.paymentMode === 'PhonePe / UPI' ? 'checked' : ''} onchange="updateSupplierPaymentMode('${sup.id}', this.value)">
@@ -996,6 +1147,7 @@ function renderMobileCards(suppliersList) {
         <div>
           <p class="text-[11px] text-gray-500 font-bold">चुकाया (Paid)</p>
           <p class="text-sm font-black text-emerald-700">₹ ${paid}</p>
+          ${paid > 0 && sup.paymentDate ? `<p class="text-[10px] text-emerald-800 font-bold mt-0.5">📅 ${sup.paymentDate}</p>` : ''}
         </div>
         <div>
           <p class="text-[11px] text-gray-500 font-bold">बाकी (Due)</p>
@@ -1068,7 +1220,7 @@ function renderMobileCards(suppliersList) {
                     हटाएं
                   </button>
                 </div>
-                <div class="grid grid-cols-3 gap-1.5">
+                <div class="grid grid-cols-4 gap-1.5">
                   <div>
                     <span class="text-[10px] text-gray-500 block">मात्रा:</span>
                     <input 
@@ -1079,9 +1231,10 @@ function renderMobileCards(suppliersList) {
                     >
                   </div>
                   <div>
-                    <span class="text-[10px] text-gray-500 block">रेट बिना GST:</span>
+                    <span class="text-[10px] text-gray-500 block">बिना GST:</span>
                     <input 
                       type="number" 
+                      step="any"
                       value="${item.rateWoGst || ''}"
                       oninput="updateItemField('${sup.id}', '${item.id}', 'rateWoGst', this.value)"
                       class="w-full px-1.5 py-1 border rounded font-bold"
@@ -1099,6 +1252,16 @@ function renderMobileCards(suppliersList) {
                       <option value="18" ${item.gstPercent == 18 ? 'selected' : ''}>18%</option>
                     </select>
                   </div>
+                  <div>
+                    <span class="text-[10px] text-emerald-700 block">रेट+GST:</span>
+                    <input 
+                      type="number" 
+                      step="any"
+                      value="${item.rateWithGst || (item.rateWoGst ? Math.round(item.rateWoGst * (1 + (item.gstPercent || 0)/100) * 100)/100 : '')}"
+                      oninput="updateItemField('${sup.id}', '${item.id}', 'rateWithGst', this.value)"
+                      class="w-full px-1.5 py-1 border border-emerald-400 bg-emerald-50 rounded font-bold text-emerald-900"
+                    >
+                  </div>
                 </div>
                 <div class="flex items-center justify-between pt-1 border-t text-sm font-black">
                   <span class="text-gray-600 text-xs">कुल रकम:</span>
@@ -1110,9 +1273,22 @@ function renderMobileCards(suppliersList) {
 
           <!-- Weekly Lump-Sum Paid Input in Mobile -->
           <div class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-gray-700">कुल बिल: <strong>₹ ${bill}</strong></span>
-              <span class="text-xs font-bold text-rose-700">बाकी: <strong>₹ ${due}</strong></span>
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-gray-700">सामान: <strong>₹ ${totals.itemsTotal || 0}</strong></span>
+              <div class="flex items-center gap-1">
+                <span class="text-amber-900 font-bold">भाड़ा: ₹</span>
+                <input 
+                  type="number" 
+                  value="${sup.freight || ''}" 
+                  placeholder="0"
+                  oninput="updateSupplierFreight('${sup.id}', this.value)"
+                  class="w-16 px-1.5 py-0.5 border border-amber-300 rounded bg-white font-bold text-amber-950 text-xs"
+                >
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-emerald-200">
+              <span class="text-xs font-black text-gray-800">कुल बिल: <strong>₹ ${bill}</strong></span>
+              <span class="text-xs font-black text-rose-700">बाकी: <strong>₹ ${due}</strong></span>
             </div>
             <div>
               <label class="block text-[11px] font-black text-emerald-900 uppercase">
@@ -1128,6 +1304,17 @@ function renderMobileCards(suppliersList) {
                   class="w-full pl-8 pr-3 py-2 bg-white border-2 border-emerald-500 rounded-xl font-black text-lg text-emerald-800"
                 >
               </div>
+            </div>
+            <div>
+              <label class="block text-[11px] font-black text-emerald-900 uppercase">
+                📅 भुगतान की तारीख (Payment Date):
+              </label>
+              <input 
+                type="date" 
+                value="${sup.paymentDate || ''}" 
+                onchange="updateSupplierPaymentDate('${sup.id}', this.value)"
+                class="w-full px-3 py-2 bg-white border-2 border-emerald-500 rounded-xl font-bold text-sm text-emerald-950 mt-1"
+              >
             </div>
             <div class="flex gap-1 justify-end text-xs font-bold">
               <button onclick="setFullPaidLumpSum('${sup.id}')" class="px-2.5 py-1 bg-emerald-700 text-white rounded">
@@ -1182,29 +1369,61 @@ function updateItemField(supplierId, itemId, field, val, isDirectTotal = false) 
 
   if (field === 'rateWoGst' || field === 'gstPercent') {
     item[field] = Number(val) || 0;
+    const gstRate = Number(item.gstPercent) || 0;
+    item.rateWithGst = Math.round((Number(item.rateWoGst) * (1 + gstRate / 100)) * 100) / 100;
+  } else if (field === 'rateWithGst') {
+    item[field] = Number(val) || 0;
+    const gstRate = Number(item.gstPercent) || 0;
+    item.rateWoGst = Math.round((Number(item.rateWithGst) / (1 + gstRate / 100)) * 100) / 100;
   } else if (field === 'totalAmount') {
     item[field] = Number(val) || 0;
   } else {
     item[field] = val;
   }
 
-  // If quantity, rateWoGst, or gstPercent changed and not direct total typing: auto calculate totalAmount
-  if (!isDirectTotal && (field === 'quantity' || field === 'rateWoGst' || field === 'gstPercent')) {
+  // If quantity, rateWoGst, rateWithGst, or gstPercent changed: auto calculate totalAmount
+  if (!isDirectTotal && (field === 'quantity' || field === 'rateWoGst' || field === 'rateWithGst' || field === 'gstPercent')) {
     const qty = parseQuantityNum(item.quantity);
-    const subtotal = qty * (Number(item.rateWoGst) || 0);
-    const gstRate = Number(item.gstPercent) || 0;
-    item.totalAmount = Math.round(subtotal * (1 + gstRate / 100));
+    if (item.rateWithGst) {
+      item.totalAmount = Math.round(qty * item.rateWithGst);
+    } else {
+      const subtotal = qty * (Number(item.rateWoGst) || 0);
+      const gstRate = Number(item.gstPercent) || 0;
+      item.totalAmount = Math.round(subtotal * (1 + gstRate / 100));
+    }
   }
 
   persistData();
   refreshRowCalculations();
 }
 
-// LUMP-SUM WEEKLY PAYMENT UPDATE
+// FREIGHT (भाड़ा / कैरिज) UPDATE
+function updateSupplierFreight(supplierId, val) {
+  const sup = state.suppliers.find(s => s.id === supplierId);
+  if (!sup) return;
+  sup.freight = Number(val) || 0;
+  persistData();
+  refreshRowCalculations();
+}
+
+// LUMP-SUM WEEKLY PAYMENT & DATE UPDATE
 function updateSupplierLumpSumPaid(supplierId, val) {
   const sup = state.suppliers.find(s => s.id === supplierId);
   if (!sup) return;
   sup.paidAmount = Number(val) || 0;
+  if (sup.paidAmount > 0 && !sup.paymentDate) {
+    sup.paymentDate = new Date().toISOString().split('T')[0];
+  } else if (sup.paidAmount === 0) {
+    sup.paymentDate = '';
+  }
+  persistData();
+  refreshRowCalculations();
+}
+
+function updateSupplierPaymentDate(supplierId, val) {
+  const sup = state.suppliers.find(s => s.id === supplierId);
+  if (!sup) return;
+  sup.paymentDate = val;
   persistData();
   refreshRowCalculations();
 }
@@ -1221,6 +1440,9 @@ function setFullPaidLumpSum(supplierId) {
   if (!sup) return;
   const totals = getSupplierTotals(sup);
   sup.paidAmount = totals.bill;
+  if (!sup.paymentDate) {
+    sup.paymentDate = new Date().toISOString().split('T')[0];
+  }
   persistData();
   renderView();
 }
@@ -1230,6 +1452,9 @@ function setHalfPaidLumpSum(supplierId) {
   if (!sup) return;
   const totals = getSupplierTotals(sup);
   sup.paidAmount = Math.round(totals.bill / 2);
+  if (!sup.paymentDate) {
+    sup.paymentDate = new Date().toISOString().split('T')[0];
+  }
   persistData();
   renderView();
 }
@@ -1238,6 +1463,7 @@ function setZeroPaidLumpSum(supplierId) {
   const sup = state.suppliers.find(s => s.id === supplierId);
   if (!sup) return;
   sup.paidAmount = 0;
+  sup.paymentDate = '';
   persistData();
   renderView();
 }
@@ -1339,10 +1565,15 @@ function saveAndPlaySound(supplierId) {
 
   if (!sup.history) sup.history = [];
   
+  const paymentDateVal = sup.paymentDate || (totals.paid > 0 ? new Date().toISOString().split('T')[0] : '');
+  sup.paymentDate = paymentDateVal;
+
   const historyEntry = {
     id: `hist_${supplierId}_${Date.now()}`,
     invoiceNo: sup.invoiceNo || 'INV-' + Math.floor(1000 + Math.random() * 9000),
     invoiceDate: sup.invoiceDate || new Date().toISOString().split('T')[0],
+    paymentDate: paymentDateVal,
+    freight: sup.freight || 0,
     weekLabel,
     settledDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
     paymentMode: sup.paymentMode || 'PhonePe / UPI',
@@ -1352,9 +1583,11 @@ function saveAndPlaySound(supplierId) {
     status: totals.status,
     items: (sup.items || []).map(it => ({
       description: it.description,
+      hsnCode: it.hsnCode || '',
       quantity: it.quantity,
       rateWoGst: it.rateWoGst,
       gstPercent: it.gstPercent,
+      rateWithGst: it.rateWithGst || 0,
       totalAmount: it.totalAmount
     }))
   };
@@ -1381,6 +1614,8 @@ function saveAndPlaySound(supplierId) {
       supplierId,
       invoiceNo: sup.invoiceNo,
       invoiceDate: sup.invoiceDate,
+      paymentDate: paymentDateVal,
+      freight: sup.freight || 0,
       weekLabel,
       settledDate: historyEntry.settledDate,
       paymentMode: historyEntry.paymentMode,
@@ -1459,10 +1694,12 @@ function openSupplierHistory(supplierId) {
           <div>
             <span class="text-xs text-gray-500 block">कुल बिल (Total)</span>
             <strong class="text-gray-900">₹ ${rec.totalBill.toLocaleString('en-IN')}</strong>
+            ${rec.freight > 0 ? `<span class="block text-[10px] text-amber-700 font-bold">(भाड़ा ₹${rec.freight})</span>` : ''}
           </div>
           <div>
             <span class="text-xs text-gray-500 block">भुगतान (${rec.paymentMode || 'UPI'})</span>
             <strong class="text-emerald-700">₹ ${rec.totalPaid.toLocaleString('en-IN')}</strong>
+            ${(rec.paymentDate || rec.settledDate) ? `<span class="block text-[11px] text-emerald-800 font-bold mt-0.5">📅 ${rec.paymentDate || rec.settledDate}</span>` : ''}
           </div>
           <div>
             <span class="text-xs text-gray-500 block">बाकी (Due)</span>
@@ -1550,7 +1787,7 @@ function shareFullHistoryWhatsApp(supplierId) {
   historyList.slice(0, 4).forEach((rec) => {
     msg += `\n📄 *इनवॉइस:* ${rec.invoiceNo} (${rec.invoiceDate || ''})\n`;
     msg += `📅 *हफ्ता:* ${rec.weekLabel}\n`;
-    msg += `• बिल: ₹${rec.totalBill} | भुगतान: ₹${rec.totalPaid} (${rec.paymentMode}) | बाकी: ₹${rec.due}\n`;
+    msg += `• बिल: ₹${rec.totalBill} | भुगतान: ₹${rec.totalPaid} (${rec.paymentMode})${(rec.paymentDate || rec.settledDate) ? ` [तारीख: ${rec.paymentDate || rec.settledDate}]` : ''} | बाकी: ₹${rec.due}\n`;
   });
 
   msg += `\nकृपया हिसाब चेक कर लें। धन्यवाद!`;
@@ -1579,10 +1816,16 @@ function shareWhatsApp(supplierId) {
   (sup.items || []).forEach(it => {
     msg += `• ${it.description} (${it.quantity}): बिना GST ₹${it.rateWoGst} + GST ${it.gstPercent}% = *₹${it.totalAmount}*\n`;
   });
+  if (totals.freight > 0) {
+    msg += `• 🚚 भाड़ा / ढुलाई (Freight & Outward): *₹${totals.freight}*\n`;
+  }
   
   msg += `--------------------------------\n`;
   msg += `*कुल बिल रकम (Total Bill):* ₹${totals.bill}\n`;
   msg += `*हफ्ते का भुगतान (Paid):* ₹${totals.paid} (${sup.paymentMode || 'UPI'})\n`;
+  if (sup.paymentDate && totals.paid > 0) {
+    msg += `💸 *भुगतान तारीख (Payment Date):* ${sup.paymentDate}\n`;
+  }
   msg += `👉 *बाकी बकाया (DUE):* ₹${totals.due}\n`;
   msg += `--------------------------------\n`;
   msg += `कृपया इनवॉइस चेक कर लें। धन्यवाद!`;
@@ -1677,13 +1920,24 @@ function closeAddItemModal() {
   state.activeSupplierForAddItem = null;
 }
 
-function calcNewItemTotal() {
+function calcNewItemTotal(source = 'woGst') {
   const qtyStr = document.getElementById('new-item-qty').value;
   const qty = parseQuantityNum(qtyStr);
-  const rate = Number(document.getElementById('new-item-rate').value) || 0;
   const gst = Number(document.getElementById('new-item-gst').value) || 0;
-  const total = Math.round((qty * rate) * (1 + gst / 100));
-  document.getElementById('new-item-total').value = total > 0 ? total : '';
+
+  if (source === 'withGst') {
+    const rateWithTax = Number(document.getElementById('new-item-rate-tax').value) || 0;
+    const rateWo = rateWithTax > 0 ? Math.round((rateWithTax / (1 + gst / 100)) * 100) / 100 : '';
+    document.getElementById('new-item-rate').value = rateWo;
+    const total = Math.round(qty * rateWithTax);
+    document.getElementById('new-item-total').value = total > 0 ? total : '';
+  } else {
+    const rateWo = Number(document.getElementById('new-item-rate').value) || 0;
+    const rateWithTax = rateWo > 0 ? Math.round((rateWo * (1 + gst / 100)) * 100) / 100 : '';
+    document.getElementById('new-item-rate-tax').value = rateWithTax;
+    const total = Math.round((qty * rateWo) * (1 + gst / 100));
+    document.getElementById('new-item-total').value = total > 0 ? total : '';
+  }
 }
 
 function initQuickItemChips() {
@@ -1712,17 +1966,21 @@ function confirmAddItem() {
   const sup = state.suppliers.find(s => s.id === state.activeSupplierForAddItem);
   if (!sup) return;
 
+  const hsnCode = document.getElementById('new-item-hsn').value.trim();
   const qty = document.getElementById('new-item-qty').value.trim() || '1';
   const rateWoGst = Number(document.getElementById('new-item-rate').value) || 0;
   const gstPercent = Number(document.getElementById('new-item-gst').value) || 0;
-  const totalAmount = Number(document.getElementById('new-item-total').value) || Math.round((parseQuantityNum(qty) * rateWoGst) * (1 + gstPercent / 100));
+  const rateWithGst = Number(document.getElementById('new-item-rate-tax').value) || (rateWoGst > 0 ? Math.round(rateWoGst * (1 + gstPercent / 100) * 100) / 100 : 0);
+  const totalAmount = Number(document.getElementById('new-item-total').value) || Math.round((parseQuantityNum(qty) * (rateWithGst || (rateWoGst * (1 + gstPercent / 100)))));
 
   const itmObj = {
     id: `itm_${Date.now()}`,
     description: desc,
+    hsnCode,
     quantity: qty,
     rateWoGst,
     gstPercent,
+    rateWithGst,
     totalAmount
   };
 

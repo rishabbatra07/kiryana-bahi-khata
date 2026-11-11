@@ -23,6 +23,7 @@ const SEED_SUPPLIERS = [
     settlementDay: "शुक्रवार (Friday)",
     invoiceNo: "INV-8841",
     invoiceDate: "2026-11-10",
+    paymentDate: "2026-11-11",
     paidAmount: 9000,
     paymentMode: "PhonePe / UPI",
     items: [
@@ -78,6 +79,7 @@ const SEED_SUPPLIERS = [
     settlementDay: "मंगलवार (Tuesday)",
     invoiceNo: "SR-4092",
     invoiceDate: "2026-11-09",
+    paymentDate: "2026-11-10",
     paidAmount: 15000,
     paymentMode: "PhonePe / UPI",
     items: [
@@ -124,6 +126,7 @@ const SEED_SUPPLIERS = [
     settlementDay: "शनिवार (Saturday)",
     invoiceNo: "ML-1102",
     invoiceDate: "2026-11-08",
+    paymentDate: "2026-11-09",
     paidAmount: 20000,
     paymentMode: "चेक (Cheque)",
     items: [
@@ -171,6 +174,71 @@ const SEED_SUPPLIERS = [
         ]
       }
     ]
+  },
+  {
+    id: "sup_se_trading",
+    name: "एस ई ट्रेडिंग कं (S E TRADING CO - Ekansh)",
+    phone: "8218612919",
+    settlementDay: "शनिवार (Saturday)",
+    invoiceNo: "896",
+    invoiceDate: "2026-10-30",
+    paymentDate: "2026-11-02",
+    freight: 225,
+    paidAmount: 20000,
+    paymentMode: "PhonePe / UPI",
+    items: [
+      {
+        id: "itm_se_1",
+        description: "Mustard Oil 15 Kg Tin First",
+        hsnCode: "15149120",
+        quantity: "5 TIN",
+        rateWoGst: 2761.90,
+        gstPercent: 5,
+        rateWithGst: 2900,
+        totalAmount: 14500
+      },
+      {
+        id: "itm_se_2",
+        description: "Refind Soya Oil 15 Kg Tin First",
+        hsnCode: "15079010",
+        quantity: "5 TIN",
+        rateWoGst: 2361.90,
+        gstPercent: 5,
+        rateWithGst: 2480,
+        totalAmount: 12400
+      },
+      {
+        id: "itm_se_3",
+        description: "Stay Fit Soya Ref 1 Litre Pouch (1*12pics)",
+        hsnCode: "15079010",
+        quantity: "60 PCS",
+        rateWoGst: 142.86,
+        gstPercent: 5,
+        rateWithGst: 150,
+        totalAmount: 9000
+      }
+    ],
+    history: [
+      {
+        id: "hist_se_1",
+        invoiceNo: "896",
+        invoiceDate: "2026-10-30",
+        paymentDate: "2026-11-02",
+        freight: 225,
+        weekLabel: "27 Oct - 02 Nov 2026",
+        settledDate: "02 Nov 2026",
+        paymentMode: "PhonePe / UPI",
+        totalBill: 36125,
+        totalPaid: 20000,
+        due: 16125,
+        status: "PARTIAL",
+        items: [
+          { description: "Mustard Oil 15 Kg Tin First", quantity: "5 TIN", rateWoGst: 2761.90, gstPercent: 5, totalAmount: 14500 },
+          { description: "Refind Soya Oil 15 Kg Tin First", quantity: "5 TIN", rateWoGst: 2361.90, gstPercent: 5, totalAmount: 12400 },
+          { description: "Stay Fit Soya Ref 1L Pouch", quantity: "60 PCS", rateWoGst: 142.86, gstPercent: 5, totalAmount: 9000 }
+        ]
+      }
+    ]
   }
 ];
 
@@ -182,7 +250,7 @@ async function initDatabase() {
     const client = await pool.connect();
     console.log('✅ Connected to PostgreSQL database successfully.');
 
-    // 1. Create Suppliers table with Invoice No & Date
+    // 1. Create Suppliers table with Invoice No & Date, Payment Date, Freight
     await client.query(`
       CREATE TABLE IF NOT EXISTS suppliers (
         id VARCHAR(64) PRIMARY KEY,
@@ -191,33 +259,43 @@ async function initDatabase() {
         settlement_day VARCHAR(50) DEFAULT 'शनिवार (Saturday)',
         invoice_no VARCHAR(100) DEFAULT '',
         invoice_date VARCHAR(50) DEFAULT '',
+        payment_date VARCHAR(50) DEFAULT '',
+        freight NUMERIC(12, 2) DEFAULT 0,
         paid_amount NUMERIC(12, 2) DEFAULT 0,
         payment_mode VARCHAR(50) DEFAULT 'PhonePe / UPI',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+      ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS payment_date VARCHAR(50) DEFAULT '';
+      ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS freight NUMERIC(12, 2) DEFAULT 0;
     `);
 
-    // 2. Create Items table with Qty, Rate Wo GST, GST %, and Total Amount
+    // 2. Create Items table with Qty, Rate Wo GST, GST %, Rate With GST, Total Amount
     await client.query(`
       CREATE TABLE IF NOT EXISTS supplier_items (
         id VARCHAR(64) PRIMARY KEY,
         supplier_id VARCHAR(64) REFERENCES suppliers(id) ON DELETE CASCADE,
         description VARCHAR(255) NOT NULL,
+        hsn_code VARCHAR(50) DEFAULT '',
         quantity VARCHAR(50) DEFAULT '1',
         rate_wo_gst NUMERIC(12, 2) DEFAULT 0,
         gst_percent NUMERIC(5, 2) DEFAULT 0,
+        rate_with_gst NUMERIC(12, 2) DEFAULT 0,
         total_amount NUMERIC(12, 2) DEFAULT 0,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+      ALTER TABLE supplier_items ADD COLUMN IF NOT EXISTS hsn_code VARCHAR(50) DEFAULT '';
+      ALTER TABLE supplier_items ADD COLUMN IF NOT EXISTS rate_with_gst NUMERIC(12, 2) DEFAULT 0;
     `);
 
-    // 3. Create Weekly History table with Invoice No & Date
+    // 3. Create Weekly History table with Invoice No & Date, Payment Date, Freight
     await client.query(`
       CREATE TABLE IF NOT EXISTS weekly_history (
         id VARCHAR(64) PRIMARY KEY,
         supplier_id VARCHAR(64) REFERENCES suppliers(id) ON DELETE CASCADE,
         invoice_no VARCHAR(100) DEFAULT '',
         invoice_date VARCHAR(50) DEFAULT '',
+        payment_date VARCHAR(50) DEFAULT '',
+        freight NUMERIC(12, 2) DEFAULT 0,
         week_label VARCHAR(100) NOT NULL,
         settled_date VARCHAR(50),
         payment_mode VARCHAR(50) DEFAULT 'PhonePe / UPI',
@@ -228,6 +306,8 @@ async function initDatabase() {
         items_json JSONB DEFAULT '[]',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+      ALTER TABLE weekly_history ADD COLUMN IF NOT EXISTS payment_date VARCHAR(50) DEFAULT '';
+      ALTER TABLE weekly_history ADD COLUMN IF NOT EXISTS freight NUMERIC(12, 2) DEFAULT 0;
     `);
 
     // Check if suppliers exist, if not seed default ones
@@ -236,23 +316,23 @@ async function initDatabase() {
       console.log('🌱 Seeding initial suppliers with invoice structure into PostgreSQL...');
       for (const sup of SEED_SUPPLIERS) {
         await client.query(
-          `INSERT INTO suppliers (id, name, phone, settlement_day, invoice_no, invoice_date, paid_amount, payment_mode) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [sup.id, sup.name, sup.phone, sup.settlementDay, sup.invoiceNo, sup.invoiceDate, sup.paidAmount, sup.paymentMode]
+          `INSERT INTO suppliers (id, name, phone, settlement_day, invoice_no, invoice_date, payment_date, freight, paid_amount, payment_mode) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [sup.id, sup.name, sup.phone, sup.settlementDay, sup.invoiceNo, sup.invoiceDate, sup.paymentDate || '', sup.freight || 0, sup.paidAmount, sup.paymentMode]
         );
         for (const itm of sup.items) {
           await client.query(
-            `INSERT INTO supplier_items (id, supplier_id, description, quantity, rate_wo_gst, gst_percent, total_amount) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [itm.id, sup.id, itm.description, itm.quantity, itm.rateWoGst, itm.gstPercent, itm.totalAmount]
+            `INSERT INTO supplier_items (id, supplier_id, description, hsn_code, quantity, rate_wo_gst, gst_percent, rate_with_gst, total_amount) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [itm.id, sup.id, itm.description, itm.hsnCode || '', itm.quantity, itm.rateWoGst, itm.gstPercent, itm.rateWithGst || 0, itm.totalAmount]
           );
         }
         for (const hist of (sup.history || [])) {
           await client.query(
             `INSERT INTO weekly_history 
-             (id, supplier_id, invoice_no, invoice_date, week_label, settled_date, payment_mode, total_bill, total_paid, due, status, items_json) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-            [hist.id, sup.id, hist.invoiceNo, hist.invoiceDate, hist.weekLabel, hist.settledDate, hist.paymentMode, hist.totalBill, hist.totalPaid, hist.due, hist.status, JSON.stringify(hist.items)]
+             (id, supplier_id, invoice_no, invoice_date, payment_date, freight, week_label, settled_date, payment_mode, total_bill, total_paid, due, status, items_json) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            [hist.id, sup.id, hist.invoiceNo, hist.invoiceDate, hist.paymentDate || hist.settledDate || '', hist.freight || 0, hist.weekLabel, hist.settledDate, hist.paymentMode, hist.totalBill, hist.totalPaid, hist.due, hist.status, JSON.stringify(hist.items)]
           );
         }
       }

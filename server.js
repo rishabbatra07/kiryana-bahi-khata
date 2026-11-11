@@ -21,7 +21,23 @@ function loadLocalSuppliers() {
       const content = fs.readFileSync(DATA_FILE, 'utf8');
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        const enriched = parsed.map(s => ({
+          ...s,
+          freight: parseFloat(s.freight) || 0,
+          paymentDate: s.paymentDate || (s.paidAmount > 0 ? (s.invoiceDate || new Date().toISOString().split('T')[0]) : ''),
+          items: (s.items || []).map(i => ({
+            ...i,
+            hsnCode: i.hsnCode || '',
+            rateWithGst: parseFloat(i.rateWithGst) || 0
+          })),
+          history: (s.history || []).map(h => ({
+            ...h,
+            freight: parseFloat(h.freight) || 0,
+            paymentDate: h.paymentDate || h.settledDate || ''
+          }))
+        }));
+        saveLocalSuppliers(enriched);
+        return enriched;
       }
     } catch (e) {
       console.error('Error reading suppliers.json:', e);
@@ -62,9 +78,11 @@ app.get('/api/suppliers', async (req, res) => {
           .map(i => ({
             id: i.id,
             description: i.description || i.name || '',
+            hsnCode: i.hsn_code || '',
             quantity: i.quantity || '1',
             rateWoGst: parseFloat(i.rate_wo_gst) || parseFloat(i.rate) || 0,
             gstPercent: parseFloat(i.gst_percent) || 0,
+            rateWithGst: parseFloat(i.rate_with_gst) || 0,
             totalAmount: parseFloat(i.total_amount) || parseFloat(i.rate) || 0
           }));
 
@@ -74,6 +92,8 @@ app.get('/api/suppliers', async (req, res) => {
             id: h.id,
             invoiceNo: h.invoice_no || '',
             invoiceDate: h.invoice_date || '',
+            paymentDate: h.payment_date || h.settled_date || '',
+            freight: parseFloat(h.freight) || 0,
             weekLabel: h.week_label,
             settledDate: h.settled_date,
             paymentMode: h.payment_mode,
@@ -91,6 +111,8 @@ app.get('/api/suppliers', async (req, res) => {
           settlementDay: sup.settlement_day,
           invoiceNo: sup.invoice_no || '',
           invoiceDate: sup.invoice_date || '',
+          paymentDate: sup.payment_date || '',
+          freight: parseFloat(sup.freight) || 0,
           paidAmount: parseFloat(sup.paid_amount) || 0,
           paymentMode: sup.payment_mode || 'PhonePe / UPI',
           items,
@@ -111,30 +133,35 @@ app.get('/api/suppliers', async (req, res) => {
 
 // 2. CREATE NEW SUPPLIER
 app.post('/api/suppliers', async (req, res) => {
-  const { id, name, phone, settlementDay, invoiceNo, invoiceDate, paidAmount, paymentMode, items } = req.body;
+  const { id, name, phone, settlementDay, invoiceNo, invoiceDate, paymentDate, freight, paidAmount, paymentMode, items } = req.body;
   const supplierId = id || `sup_${Date.now()}`;
+  const nowStr = new Date().toISOString().split('T')[0];
+  const finalPaymentDate = paymentDate || (paidAmount > 0 ? nowStr : '');
+  const freightVal = parseFloat(freight) || 0;
 
   if (pool) {
     try {
       await pool.query(
-        `INSERT INTO suppliers (id, name, phone, settlement_day, invoice_no, invoice_date, paid_amount, payment_mode) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [supplierId, name, phone, settlementDay, invoiceNo || '', invoiceDate || '', paidAmount || 0, paymentMode || 'PhonePe / UPI']
+        `INSERT INTO suppliers (id, name, phone, settlement_day, invoice_no, invoice_date, payment_date, freight, paid_amount, payment_mode) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [supplierId, name, phone, settlementDay, invoiceNo || '', invoiceDate || '', finalPaymentDate, freightVal, paidAmount || 0, paymentMode || 'PhonePe / UPI']
       );
 
       if (items && items.length > 0) {
         for (const itm of items) {
           const itmId = itm.id || `itm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
           await pool.query(
-            `INSERT INTO supplier_items (id, supplier_id, description, quantity, rate_wo_gst, gst_percent, total_amount) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            `INSERT INTO supplier_items (id, supplier_id, description, hsn_code, quantity, rate_wo_gst, gst_percent, rate_with_gst, total_amount) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [
               itmId, 
               supplierId, 
               itm.description || itm.name || '', 
+              itm.hsnCode || '',
               itm.quantity || '1', 
               itm.rateWoGst || 0, 
               itm.gstPercent || 0, 
+              itm.rateWithGst || 0,
               itm.totalAmount || 0
             ]
           );
@@ -156,6 +183,8 @@ app.post('/api/suppliers', async (req, res) => {
     settlementDay,
     invoiceNo: invoiceNo || '',
     invoiceDate: invoiceDate || '',
+    paymentDate: finalPaymentDate,
+    freight: freightVal,
     paidAmount: paidAmount || 0,
     paymentMode: paymentMode || 'PhonePe / UPI',
     items: items || [],
@@ -238,12 +267,14 @@ app.delete('/api/items/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-// 6. SAVE WEEKLY SETTLEMENT (INVOICE, ITEMS & LUMP-SUM WEEKLY PAYMENT)
+// 6. SAVE WEEKLY SETTLEMENT (INVOICE, ITEMS, FREIGHT & LUMP-SUM WEEKLY PAYMENT)
 app.post('/api/settlements', async (req, res) => {
   const { 
     supplierId, 
     invoiceNo, 
     invoiceDate, 
+    paymentDate,
+    freight,
     weekLabel, 
     settledDate, 
     paymentMode, 
@@ -254,14 +285,17 @@ app.post('/api/settlements', async (req, res) => {
     items 
   } = req.body;
 
+  const finalPaymentDate = paymentDate || (paidAmount > 0 ? (settledDate || new Date().toISOString().split('T')[0]) : '');
+  const freightVal = parseFloat(freight) || 0;
+
   if (pool) {
     try {
-      // 1. Update supplier table with latest invoice & payment info
+      // 1. Update supplier table with latest invoice & payment info & freight
       await pool.query(
         `UPDATE suppliers 
-         SET invoice_no = $1, invoice_date = $2, paid_amount = $3, payment_mode = $4 
-         WHERE id = $5`,
-        [invoiceNo || '', invoiceDate || '', paidAmount || 0, paymentMode || 'PhonePe / UPI', supplierId]
+         SET invoice_no = $1, invoice_date = $2, payment_date = $3, freight = $4, paid_amount = $5, payment_mode = $6 
+         WHERE id = $7`,
+        [invoiceNo || '', invoiceDate || '', finalPaymentDate, freightVal, paidAmount || 0, paymentMode || 'PhonePe / UPI', supplierId]
       );
 
       // 2. Update or insert items
@@ -269,28 +303,28 @@ app.post('/api/settlements', async (req, res) => {
         for (const itm of items) {
           const updateRes = await pool.query(
             `UPDATE supplier_items 
-             SET description = $1, quantity = $2, rate_wo_gst = $3, gst_percent = $4, total_amount = $5 
-             WHERE id = $6 AND supplier_id = $7`,
-            [itm.description || itm.name, itm.quantity || '1', itm.rateWoGst || 0, itm.gstPercent || 0, itm.totalAmount || 0, itm.id, supplierId]
+             SET description = $1, hsn_code = $2, quantity = $3, rate_wo_gst = $4, gst_percent = $5, rate_with_gst = $6, total_amount = $7 
+             WHERE id = $8 AND supplier_id = $9`,
+            [itm.description || itm.name, itm.hsnCode || '', itm.quantity || '1', itm.rateWoGst || 0, itm.gstPercent || 0, itm.rateWithGst || 0, itm.totalAmount || 0, itm.id, supplierId]
           );
 
           if (updateRes.rowCount === 0) {
             await pool.query(
-              `INSERT INTO supplier_items (id, supplier_id, description, quantity, rate_wo_gst, gst_percent, total_amount) 
-               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-              [itm.id || `itm_${Date.now()}`, supplierId, itm.description || itm.name, itm.quantity || '1', itm.rateWoGst || 0, itm.gstPercent || 0, itm.totalAmount || 0]
+              `INSERT INTO supplier_items (id, supplier_id, description, hsn_code, quantity, rate_wo_gst, gst_percent, rate_with_gst, total_amount) 
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              [itm.id || `itm_${Date.now()}`, supplierId, itm.description || itm.name, itm.hsnCode || '', itm.quantity || '1', itm.rateWoGst || 0, itm.gstPercent || 0, itm.rateWithGst || 0, itm.totalAmount || 0]
             );
           }
         }
       }
 
-      // 3. Record Weekly History
+      // 3. Record Weekly History with Payment Date & Freight
       const histId = `hist_${supplierId}_${Date.now()}`;
       await pool.query(
         `INSERT INTO weekly_history 
-         (id, supplier_id, invoice_no, invoice_date, week_label, settled_date, payment_mode, total_bill, total_paid, due, status, items_json) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [histId, supplierId, invoiceNo || '', invoiceDate || '', weekLabel, settledDate, paymentMode, totalBill, paidAmount, due, status, JSON.stringify(items)]
+         (id, supplier_id, invoice_no, invoice_date, payment_date, freight, week_label, settled_date, payment_mode, total_bill, total_paid, due, status, items_json) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [histId, supplierId, invoiceNo || '', invoiceDate || '', finalPaymentDate, freightVal, weekLabel, settledDate, paymentMode, totalBill, paidAmount, due, status, JSON.stringify(items)]
       );
 
       return res.json({ success: true, message: 'Weekly settlement saved to PostgreSQL' });
@@ -305,6 +339,8 @@ app.post('/api/settlements', async (req, res) => {
   if (sup) {
     sup.invoiceNo = invoiceNo || '';
     sup.invoiceDate = invoiceDate || '';
+    sup.paymentDate = finalPaymentDate;
+    sup.freight = freightVal;
     sup.paidAmount = paidAmount || 0;
     sup.paymentMode = paymentMode || 'PhonePe / UPI';
     sup.items = items;
@@ -313,6 +349,8 @@ app.post('/api/settlements', async (req, res) => {
       id: `hist_${Date.now()}`,
       invoiceNo,
       invoiceDate,
+      paymentDate: finalPaymentDate,
+      freight: freightVal,
       weekLabel,
       settledDate,
       paymentMode,
