@@ -1,6 +1,8 @@
 # किराना बही खाता (Kiryana Bahi Khata)
 ### Old-Admin Friendly Supplier Rate & Payment Tracker
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/rishabbatra07/kiryana-bahi-khata)
+
 A lightweight, high-contrast, bilingual (हिंदी / English) web and mobile application designed specifically for older Kiryana store owners to manage weekly supplier payments with minimal typing.
 
 ---
