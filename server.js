@@ -375,8 +375,10 @@ app.post('/api/settlements', async (req, res) => {
     sup.paymentMode = paymentMode || 'PhonePe / UPI';
     sup.items = items;
     if (!sup.history) sup.history = [];
-    sup.history.unshift({
-      id: `hist_${Date.now()}`,
+    const invKey = String(invoiceNo || '').trim().toLowerCase();
+    const existingHistIdx = sup.history.findIndex(h => String(h.invoiceNo || '').trim().toLowerCase() === invKey);
+    const histEntry = {
+      id: existingHistIdx >= 0 ? sup.history[existingHistIdx].id : `hist_${Date.now()}`,
       invoiceNo,
       invoiceDate,
       paymentDate: finalPaymentDate,
@@ -389,7 +391,10 @@ app.post('/api/settlements', async (req, res) => {
       due,
       status,
       items
-    });
+    };
+    if (existingHistIdx >= 0) {
+      sup.history[existingHistIdx] = histEntry;
+    }
     saveLocalSuppliers(localMemorySuppliers);
   }
   res.json({ success: true, message: 'Weekly settlement saved to memory' });

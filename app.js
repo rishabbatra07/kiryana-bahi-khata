@@ -177,47 +177,57 @@ const DEFAULT_SUPPLIERS = [
     name: "एस ई ट्रेडिंग कं (S E TRADING CO - Ekansh)",
     phone: "8218612919",
     settlementDay: "शनिवार (Saturday)",
-    invoiceNo: "896",
-    invoiceDate: "2026-10-30",
-    paymentDate: "2026-11-02",
-    freight: 225,
-    paidAmount: 20000,
+    invoiceNo: "852",
+    invoiceDate: "2026-10-23",
+    paymentDate: "23 Oct 2026",
+    freight: 180,
+    paidAmount: 0,
     paymentMode: "PhonePe / UPI",
     items: [
       {
-        id: "itm_se_1",
-        description: "Mustard Oil 15 Kg Tin First",
-        hsnCode: "15149120",
-        quantity: "5 TIN",
-        rateWoGst: 2761.90,
+        id: "itm_1794412794078",
+        description: "Stay fit Soya Ref",
+        hsnCode: "15079010",
+        quantity: "5",
+        rateWoGst: 2380.95,
         gstPercent: 5,
-        rateWithGst: 2900,
-        totalAmount: 14500
+        rateWithGst: 2500,
+        totalAmount: 12500
       },
       {
-        id: "itm_se_2",
-        description: "Refind Soya Oil 15 Kg Tin First",
+        id: "itm_1794412860651",
+        description: "Refined Soya Oil -15 Kg Tin First",
         hsnCode: "15079010",
-        quantity: "5 TIN",
-        rateWoGst: 2361.90,
+        quantity: "5",
+        rateWoGst: 2342.86,
         gstPercent: 5,
-        rateWithGst: 2480,
-        totalAmount: 12400
+        rateWithGst: 2460,
+        totalAmount: 12300
       },
       {
-        id: "itm_se_3",
-        description: "Stay Fit Soya Ref 1 Litre Pouch(1*12pics)",
+        id: "itm_1794412913848",
+        description: "Stay Fit Soya Ref 500 Ml",
         hsnCode: "15079010",
-        quantity: "60 PCS (5 Box)",
-        rateWoGst: 142.86,
+        quantity: "24",
+        rateWoGst: 76.19,
         gstPercent: 5,
-        rateWithGst: 150,
-        totalAmount: 9000
+        rateWithGst: 80,
+        totalAmount: 1920
+      },
+      {
+        id: "itm_1794412958112",
+        description: "Sonali KGMO - 500 ML Bottle",
+        hsnCode: "15079010",
+        quantity: "24",
+        rateWoGst: 90.48,
+        gstPercent: 5,
+        rateWithGst: 95,
+        totalAmount: 2280
       }
     ],
     history: [
       {
-        id: "hist_se_1",
+        id: "hist_se_896",
         invoiceNo: "896",
         invoiceDate: "2026-10-30",
         paymentDate: "2026-11-02",
@@ -230,9 +240,36 @@ const DEFAULT_SUPPLIERS = [
         due: 16125,
         status: "PARTIAL",
         items: [
-          { description: "Mustard Oil 15 Kg Tin First", quantity: "5 TIN", rateWoGst: 2761.90, gstPercent: 5, rateWithGst: 2900, totalAmount: 14500 },
-          { description: "Refind Soya Oil 15 Kg Tin First", quantity: "5 TIN", rateWoGst: 2361.90, gstPercent: 5, rateWithGst: 2480, totalAmount: 12400 },
-          { description: "Stay Fit Soya Ref 1L Pouch", quantity: "60 PCS", rateWoGst: 142.86, gstPercent: 5, rateWithGst: 150, totalAmount: 9000 }
+          {
+            id: "itm_se_1",
+            description: "Mustard Oil 15 Kg Tin First",
+            hsnCode: "15149120",
+            quantity: "5 TIN",
+            rateWoGst: 2761.90,
+            gstPercent: 5,
+            rateWithGst: 2900,
+            totalAmount: 14500
+          },
+          {
+            id: "itm_se_2",
+            description: "Refind Soya Oil 15 Kg Tin First",
+            hsnCode: "15079010",
+            quantity: "5 TIN",
+            rateWoGst: 2361.90,
+            gstPercent: 5,
+            rateWithGst: 2480,
+            totalAmount: 12400
+          },
+          {
+            id: "itm_se_3",
+            description: "Stay Fit Soya Ref 1 Litre Pouch(1*12pics)",
+            hsnCode: "15079010",
+            quantity: "60 PCS (5 Box)",
+            rateWoGst: 142.86,
+            gstPercent: 5,
+            rateWithGst: 150,
+            totalAmount: 9000
+          }
         ]
       }
     ]
@@ -419,6 +456,25 @@ function recoverAndMergeCustomSuppliers(currentList) {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(recoveredTrader)
                 }).catch(() => {});
+              } else {
+                // Merge any distinct past invoices from old storage
+                const existingTrader = merged.find(s => 
+                  (s.id && oldSup.id && s.id === oldSup.id) || 
+                  (s.name && oldSup.name && s.name.trim().toLowerCase() === oldSup.name.trim().toLowerCase())
+                );
+                if (existingTrader && Array.isArray(oldSup.history)) {
+                  if (!existingTrader.history) existingTrader.history = [];
+                  oldSup.history.forEach(oldHist => {
+                    if (oldHist && oldHist.invoiceNo) {
+                      const invKey = String(oldHist.invoiceNo).trim().toLowerCase();
+                      const hasIt = existingTrader.history.some(h => String(h.invoiceNo || '').trim().toLowerCase() === invKey) ||
+                                    String(existingTrader.invoiceNo || '').trim().toLowerCase() === invKey;
+                      if (!hasIt) {
+                        existingTrader.history.push(oldHist);
+                      }
+                    }
+                  });
+                }
               }
             }
           });
@@ -1786,11 +1842,10 @@ function saveAndPlaySound(supplierId) {
     }))
   };
 
-  const existingIdx = sup.history.findIndex(h => h.weekLabel === weekLabel);
+  const currentInvKey = String(sup.invoiceNo || '').trim().toLowerCase();
+  const existingIdx = sup.history.findIndex(h => String(h.invoiceNo || '').trim().toLowerCase() === currentInvKey);
   if (existingIdx >= 0) {
     sup.history[existingIdx] = historyEntry;
-  } else {
-    sup.history.unshift(historyEntry);
   }
 
   persistData();
@@ -1882,7 +1937,7 @@ function openSupplierHistory(supplierId) {
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>यह बिल खोलें</span>
             </button>
-            <button onclick="deleteHistoryEntry('${supplierId}', '${rec.weekLabel}')" title="यह रिकॉर्ड हटाएं" class="text-gray-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition">
+            <button onclick="deleteHistoryEntry('${supplierId}', '${rec.id || rec.invoiceNo}')" title="यह रिकॉर्ड हटाएं" class="text-gray-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </div>
@@ -1936,21 +1991,24 @@ function openHistoryOverviewModal() {
   if (targetId) openSupplierHistory(targetId);
 }
 
-// DELETE A SPECIFIC HISTORY ARCHIVE WEEK
-function deleteHistoryEntry(supplierId, weekLabel) {
+// DELETE A SPECIFIC HISTORY ARCHIVE BILL
+function deleteHistoryEntry(supplierId, recordId) {
   const sup = state.suppliers.find(s => s.id === supplierId);
   if (!sup || !sup.history) return;
 
+  const toDelete = sup.history.find(h => h.id === recordId || h.invoiceNo === recordId);
+  const invLabel = toDelete ? `बिल #${toDelete.invoiceNo}` : 'यह रिकॉर्ड';
+
   const confirmMsg = state.currentLang === 'hi'
-    ? `क्या आप ${weekLabel} का पुराना रिकॉर्ड हटाना चाहते हैं?`
-    : `Delete record for ${weekLabel}?`;
+    ? `क्या आप ${invLabel} को इतिहास से हटाना चाहते हैं?`
+    : `Delete ${invLabel} from history?`;
 
   if (confirm(confirmMsg)) {
-    const toDelete = sup.history.find(h => h.weekLabel === weekLabel);
-    sup.history = sup.history.filter(h => h.weekLabel !== weekLabel);
+    sup.history = sup.history.filter(h => h.id !== recordId && h.invoiceNo !== recordId);
     persistData();
     openSupplierHistory(supplierId);
-    showToast(state.currentLang === 'hi' ? "पुराना रिकॉर्ड हटाया गया" : "History record deleted");
+    renderView();
+    showToast(state.currentLang === 'hi' ? `${invLabel} हटाया गया` : "History bill deleted");
 
     if (toDelete && toDelete.id) {
       fetch(`/api/history/${toDelete.id}`, { method: 'DELETE' }).catch(err => console.log('Offline/sync error:', err));
