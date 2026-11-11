@@ -143,9 +143,22 @@ app.post('/api/suppliers', async (req, res) => {
     try {
       await pool.query(
         `INSERT INTO suppliers (id, name, phone, settlement_day, invoice_no, invoice_date, payment_date, freight, paid_amount, payment_mode) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           phone = EXCLUDED.phone,
+           settlement_day = EXCLUDED.settlement_day,
+           invoice_no = EXCLUDED.invoice_no,
+           invoice_date = EXCLUDED.invoice_date,
+           payment_date = EXCLUDED.payment_date,
+           freight = EXCLUDED.freight,
+           paid_amount = EXCLUDED.paid_amount,
+           payment_mode = EXCLUDED.payment_mode`,
         [supplierId, name, phone, settlementDay, invoiceNo || '', invoiceDate || '', finalPaymentDate, freightVal, paidAmount || 0, paymentMode || 'PhonePe / UPI']
       );
+
+      // Clean old items for this supplier and insert latest
+      await pool.query('DELETE FROM supplier_items WHERE supplier_id = $1', [supplierId]);
 
       if (items && items.length > 0) {
         for (const itm of items) {
@@ -170,26 +183,43 @@ app.post('/api/suppliers', async (req, res) => {
 
       return res.json({ success: true, id: supplierId });
     } catch (err) {
-      console.error('Error inserting supplier:', err.message);
+      console.error('Error inserting/updating supplier:', err.message);
       return res.status(500).json({ error: err.message });
     }
   }
 
   // Local fallback
-  localMemorySuppliers.push({
-    id: supplierId,
-    name,
-    phone,
-    settlementDay,
-    invoiceNo: invoiceNo || '',
-    invoiceDate: invoiceDate || '',
-    paymentDate: finalPaymentDate,
-    freight: freightVal,
-    paidAmount: paidAmount || 0,
-    paymentMode: paymentMode || 'PhonePe / UPI',
-    items: items || [],
-    history: []
-  });
+  const existingIdx = localMemorySuppliers.findIndex(s => s.id === supplierId);
+  if (existingIdx >= 0) {
+    localMemorySuppliers[existingIdx] = {
+      ...localMemorySuppliers[existingIdx],
+      name,
+      phone,
+      settlementDay,
+      invoiceNo: invoiceNo || '',
+      invoiceDate: invoiceDate || '',
+      paymentDate: finalPaymentDate,
+      freight: freightVal,
+      paidAmount: paidAmount || 0,
+      paymentMode: paymentMode || 'PhonePe / UPI',
+      items: items || []
+    };
+  } else {
+    localMemorySuppliers.push({
+      id: supplierId,
+      name,
+      phone,
+      settlementDay,
+      invoiceNo: invoiceNo || '',
+      invoiceDate: invoiceDate || '',
+      paymentDate: finalPaymentDate,
+      freight: freightVal,
+      paidAmount: paidAmount || 0,
+      paymentMode: paymentMode || 'PhonePe / UPI',
+      items: items || [],
+      history: []
+    });
+  }
   saveLocalSuppliers(localMemorySuppliers);
   res.json({ success: true, id: supplierId });
 });

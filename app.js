@@ -288,6 +288,7 @@ const DICTIONARY = {
     btn_half_paid: "आधा (50%)",
     btn_zero_paid: "0 दिया",
     btn_add_item: "+ नया सामान जोड़ें (Add Item)",
+    btn_new_bill: "+ नया बिल दर्ज करें (New Bill)",
     btn_save: "✓ बिल व पेमेंट सेव करें (Save)",
     btn_whatsapp: "WhatsApp पर बिल भेजें",
     btn_history: "इतिहास 📜",
@@ -334,6 +335,7 @@ const DICTIONARY = {
     btn_half_paid: "50% Paid",
     btn_zero_paid: "Zero (0)",
     btn_add_item: "+ Add Item",
+    btn_new_bill: "+ Add New Bill",
     btn_save: "✓ Save Bill & Payment",
     btn_whatsapp: "Send on WhatsApp",
     btn_history: "History 📜",
@@ -809,6 +811,10 @@ function renderDesktopTable(suppliersList) {
             <i data-lucide="history" class="w-3.5 h-3.5 text-amber-800"></i>
             <span>${t.btn_history}</span>
           </button>
+          <button onclick="openAddBillModal('${sup.id}')" title="इस सप्लायर का नया बिल दर्ज करें" class="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black text-xs shadow-sm flex items-center gap-1 transition">
+            <i data-lucide="file-plus" class="w-3.5 h-3.5"></i>
+            <span>+ नया बिल</span>
+          </button>
           <button onclick="toggleExpandSupplier('${sup.id}')" class="px-3 py-1.5 bg-rose-900 hover:bg-rose-800 text-white rounded-xl text-xs font-bold shadow-sm transition">
             ${isExpanded ? 'बंद करें' : 'बिल खोलें ✏️'}
           </button>
@@ -855,9 +861,13 @@ function renderDesktopTable(suppliersList) {
 
               <!-- Action buttons in header -->
               <div class="flex items-center gap-2">
+                <button onclick="openAddBillModal('${sup.id}')" title="नया इनवॉइस दर्ज करें व पुराना इतिहास में सेव करें" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-1.5 transition">
+                  <i data-lucide="file-plus" class="w-4 h-4"></i>
+                  <span>+ नया बिल दर्ज करें (New Bill)</span>
+                </button>
                 <button onclick="clearWeeklyEntries('${sup.id}')" title="इस हफ्ते के रेट व भुगतान 0 करें" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold flex items-center gap-1 transition">
                   <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                  <span>इस हफ्ते का हिसाब खाली करें</span>
+                  <span>हिसाब खाली करें</span>
                 </button>
                 <button onclick="openAddItemModal('${sup.id}')" class="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-xl text-xs font-bold border border-rose-300 flex items-center gap-1.5">
                   <i data-lucide="plus-circle" class="w-4 h-4 text-rose-700"></i>
@@ -1159,17 +1169,21 @@ function renderMobileCards(suppliersList) {
       </div>
 
       <!-- Action buttons -->
-      <div class="mt-3 pt-2 border-t flex items-center justify-between gap-2">
-        <button onclick="openSupplierHistory('${sup.id}')" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold flex items-center gap-1 transition">
+      <div class="mt-3 pt-2 border-t flex flex-wrap items-center justify-between gap-2">
+        <button onclick="openSupplierHistory('${sup.id}')" class="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold flex items-center gap-1 transition">
           <i data-lucide="history" class="w-3.5 h-3.5 text-amber-800"></i>
-          <span>📜 पुराना हिसाब</span>
+          <span>📜 हिसाब</span>
+        </button>
+        <button onclick="openAddBillModal('${sup.id}')" class="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition">
+          <i data-lucide="file-plus" class="w-3.5 h-3.5"></i>
+          <span>+ नया बिल</span>
         </button>
         <div class="flex items-center gap-1.5">
           <button onclick="deleteSupplier('${sup.id}')" title="सप्लायर हटाएं" class="p-2 bg-gray-100 hover:bg-rose-100 text-gray-500 hover:text-rose-700 rounded-xl transition">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
           </button>
           <button onclick="toggleExpandSupplier('${sup.id}')" class="px-3 py-1.5 bg-rose-900 hover:bg-rose-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition">
-            <span>${isExpanded ? '▲ बंद करें' : '▼ बिल व भुगतान भरें'}</span>
+            <span>${isExpanded ? '▲ बंद करें' : '▼ बिल खोलें'}</span>
           </button>
         </div>
       </div>
@@ -1204,11 +1218,14 @@ function renderMobileCards(suppliersList) {
           <div class="flex items-center justify-between">
             <span class="text-xs font-black text-gray-700 uppercase">सामान की लिस्ट:</span>
             <div class="flex items-center gap-1.5">
+              <button onclick="openAddBillModal('${sup.id}')" class="text-xs font-bold text-white bg-emerald-700 px-2 py-1 rounded-lg">
+                + नया बिल
+              </button>
               <button onclick="clearWeeklyEntries('${sup.id}')" class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-lg">
-                ↺ खाली करें
+                ↺ खाली
               </button>
               <button onclick="openAddItemModal('${sup.id}')" class="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200">
-                + सामान जोड़ें
+                + सामान
               </button>
             </div>
           </div>
@@ -1836,6 +1853,158 @@ function shareWhatsApp(supplierId) {
   const phone = sup.phone ? sup.phone.replace(/[^0-9]/g, '') : '';
   const url = `https://wa.me/${phone ? '91' + phone : ''}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
+}
+
+// MODAL: ADD NEW BILL TO EXISTING SUPPLIER
+function openAddBillModal(supplierId) {
+  const sup = state.suppliers.find(s => s.id === supplierId);
+  if (!sup) return;
+
+  document.getElementById('add-bill-supplier-id').value = supplierId;
+  const oldInvText = sup.invoiceNo ? ` (चालू बिल: #${sup.invoiceNo})` : '';
+  document.getElementById('modal-add-bill-supplier-name').textContent = `${sup.name}${oldInvText}`;
+  
+  // Suggest next invoice number
+  let nextInv = '';
+  if (sup.invoiceNo && /^\d+$/.test(sup.invoiceNo.trim())) {
+    nextInv = String(parseInt(sup.invoiceNo.trim(), 10) + 1);
+  } else if (sup.invoiceNo && sup.invoiceNo.includes('-')) {
+    const parts = sup.invoiceNo.split('-');
+    const last = parts[parts.length - 1];
+    if (/^\d+$/.test(last)) {
+      parts[parts.length - 1] = String(parseInt(last, 10) + 1);
+      nextInv = parts.join('-');
+    }
+  }
+
+  document.getElementById('add-bill-invoice-no').value = nextInv;
+  document.getElementById('add-bill-invoice-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('add-bill-freight').value = '0';
+  document.getElementById('add-bill-archive-current').checked = true;
+  document.getElementById('add-bill-archive-label').textContent = sup.invoiceNo 
+    ? `चालू बिल #${sup.invoiceNo} को पुराने रिकॉर्ड (Ledger History) में सुरक्षित करें` 
+    : 'चालू बिल को पुराने रिकॉर्ड (Ledger History) में सुरक्षित करें';
+
+  document.getElementById('modal-add-bill').classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+  setTimeout(() => {
+    document.getElementById('add-bill-invoice-no').focus();
+  }, 100);
+}
+
+function closeAddBillModal() {
+  document.getElementById('modal-add-bill').classList.add('hidden');
+}
+
+function confirmAddNewBill() {
+  const supplierId = document.getElementById('add-bill-supplier-id').value;
+  const sup = state.suppliers.find(s => s.id === supplierId);
+  if (!sup) return;
+
+  const invoiceNo = document.getElementById('add-bill-invoice-no').value.trim();
+  const invoiceDate = document.getElementById('add-bill-invoice-date').value;
+  const freight = parseFloat(document.getElementById('add-bill-freight').value) || 0;
+  const archiveCurrent = document.getElementById('add-bill-archive-current').checked;
+  const itemsMode = document.querySelector('input[name="add_bill_items_mode"]:checked')?.value || 'keep_template';
+
+  if (!invoiceNo) {
+    alert(state.currentLang === 'hi' ? 'कृपया नया बिल / इनवॉइस नंबर भरें' : 'Please enter invoice number');
+    return;
+  }
+
+  // 1. Archive current active bill if requested and valid
+  if (archiveCurrent && (sup.invoiceNo || (sup.items && sup.items.length > 0))) {
+    const totals = getSupplierTotals(sup);
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const weekLabel = `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
+    const paymentDateVal = sup.paymentDate || (sup.paidAmount > 0 ? (sup.invoiceDate || new Date().toISOString().split('T')[0]) : '');
+
+    const historyEntry = {
+      id: `hist_${supplierId}_${Date.now()}`,
+      invoiceNo: sup.invoiceNo || 'INV-' + Math.floor(1000 + Math.random() * 9000),
+      invoiceDate: sup.invoiceDate || new Date().toISOString().split('T')[0],
+      paymentDate: paymentDateVal,
+      freight: sup.freight || 0,
+      weekLabel,
+      settledDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      paymentMode: sup.paymentMode || 'PhonePe / UPI',
+      totalBill: totals.bill,
+      totalPaid: totals.paid,
+      due: totals.due,
+      status: totals.status,
+      items: (sup.items || []).map(i => ({ ...i }))
+    };
+
+    if (!sup.history) sup.history = [];
+    sup.history.unshift(historyEntry);
+
+    // Sync settlement archive to backend
+    fetch('/api/settlements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        supplierId,
+        invoiceNo: sup.invoiceNo,
+        invoiceDate: sup.invoiceDate,
+        paymentDate: paymentDateVal,
+        freight: sup.freight || 0,
+        weekLabel,
+        settledDate: historyEntry.settledDate,
+        paymentMode: historyEntry.paymentMode,
+        totalBill: totals.bill,
+        paidAmount: totals.paid,
+        due: totals.due,
+        status: totals.status,
+        items: historyEntry.items
+      })
+    }).catch(err => console.log('Settlement sync error:', err));
+  }
+
+  // 2. Setup the new active bill
+  sup.invoiceNo = invoiceNo;
+  sup.invoiceDate = invoiceDate || new Date().toISOString().split('T')[0];
+  sup.freight = freight;
+  sup.paidAmount = 0;
+  sup.paymentDate = '';
+
+  if (itemsMode === 'keep_template' && sup.items && sup.items.length > 0) {
+    sup.items = sup.items.map((it, idx) => ({
+      id: `itm_${Date.now()}_${idx}`,
+      description: it.description,
+      hsnCode: it.hsnCode || '',
+      quantity: '',
+      rateWoGst: 0,
+      gstPercent: it.gstPercent || 0,
+      rateWithGst: 0,
+      totalAmount: 0
+    }));
+  } else if (itemsMode === 'blank') {
+    sup.items = [];
+  }
+
+  // Expand supplier so user can immediately view/add items
+  state.expandedSupplierId = sup.id;
+
+  persistData();
+  closeAddBillModal();
+  renderView();
+
+  playSoundboxChime(sup.name.split('(')[0].trim(), 0);
+  const msg = state.currentLang === 'hi' 
+    ? `नया बिल #${invoiceNo} शुरू हुआ! कृपया सामान व रेट दर्ज करें।` 
+    : `New bill #${invoiceNo} started! Please enter items and rates.`;
+  showToast(msg);
+
+  // Sync updated supplier to backend
+  fetch('/api/suppliers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sup)
+  }).catch(err => console.log('Offline/sync error:', err));
 }
 
 // MODAL: ADD SUPPLIER
