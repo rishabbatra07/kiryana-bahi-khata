@@ -21,7 +21,7 @@ initDatabase();
 // REST API ENDPOINTS
 // ==========================================
 
-// 1. GET ALL SUPPLIERS (WITH ITEMS & RECENT HISTORY)
+// 1. GET ALL SUPPLIERS (WITH INVOICE, ITEMS & RECENT HISTORY)
 app.get('/api/suppliers', async (req, res) => {
   if (pool) {
     try {
@@ -34,15 +34,19 @@ app.get('/api/suppliers', async (req, res) => {
           .filter(i => i.supplier_id === sup.id)
           .map(i => ({
             id: i.id,
-            name: i.name,
-            rate: parseFloat(i.rate) || 0,
-            paid: parseFloat(i.paid) || 0
+            description: i.description || i.name || '',
+            quantity: i.quantity || '1',
+            rateWoGst: parseFloat(i.rate_wo_gst) || parseFloat(i.rate) || 0,
+            gstPercent: parseFloat(i.gst_percent) || 0,
+            totalAmount: parseFloat(i.total_amount) || parseFloat(i.rate) || 0
           }));
 
         const history = histResult.rows
           .filter(h => h.supplier_id === sup.id)
           .map(h => ({
             id: h.id,
+            invoiceNo: h.invoice_no || '',
+            invoiceDate: h.invoice_date || '',
             weekLabel: h.week_label,
             settledDate: h.settled_date,
             paymentMode: h.payment_mode,
@@ -58,6 +62,10 @@ app.get('/api/suppliers', async (req, res) => {
           name: sup.name,
           phone: sup.phone,
           settlementDay: sup.settlement_day,
+          invoiceNo: sup.invoice_no || '',
+          invoiceDate: sup.invoice_date || '',
+          paidAmount: parseFloat(sup.paid_amount) || 0,
+          paymentMode: sup.payment_mode || 'PhonePe / UPI',
           items,
           history
         };
@@ -76,22 +84,32 @@ app.get('/api/suppliers', async (req, res) => {
 
 // 2. CREATE NEW SUPPLIER
 app.post('/api/suppliers', async (req, res) => {
-  const { id, name, phone, settlementDay, items } = req.body;
+  const { id, name, phone, settlementDay, invoiceNo, invoiceDate, paidAmount, paymentMode, items } = req.body;
   const supplierId = id || `sup_${Date.now()}`;
 
   if (pool) {
     try {
       await pool.query(
-        'INSERT INTO suppliers (id, name, phone, settlement_day) VALUES ($1, $2, $3, $4)',
-        [supplierId, name, phone, settlementDay]
+        `INSERT INTO suppliers (id, name, phone, settlement_day, invoice_no, invoice_date, paid_amount, payment_mode) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [supplierId, name, phone, settlementDay, invoiceNo || '', invoiceDate || '', paidAmount || 0, paymentMode || 'PhonePe / UPI']
       );
 
       if (items && items.length > 0) {
         for (const itm of items) {
           const itmId = itm.id || `itm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
           await pool.query(
-            'INSERT INTO supplier_items (id, supplier_id, name, rate, paid) VALUES ($1, $2, $3, $4, $5)',
-            [itmId, supplierId, itm.name, itm.rate || 0, itm.paid || 0]
+            `INSERT INTO supplier_items (id, supplier_id, description, quantity, rate_wo_gst, gst_percent, total_amount) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+              itmId, 
+              supplierId, 
+              itm.description || itm.name || '', 
+              itm.quantity || '1', 
+              itm.rateWoGst || 0, 
+              itm.gstPercent || 0, 
+              itm.totalAmount || 0
+            ]
           );
         }
       }
@@ -104,7 +122,18 @@ app.post('/api/suppliers', async (req, res) => {
   }
 
   // Local fallback
-  localMemorySuppliers.push({ id: supplierId, name, phone, settlementDay, items: items || [], history: [] });
+  localMemorySuppliers.push({
+    id: supplierId,
+    name,
+    phone,
+    settlementDay,
+    invoiceNo: invoiceNo || '',
+    invoiceDate: invoiceDate || '',
+    paidAmount: paidAmount || 0,
+    paymentMode: paymentMode || 'PhonePe / UPI',
+    items: items || [],
+    history: []
+  });
   res.json({ success: true, id: supplierId });
 });
 
@@ -129,14 +158,15 @@ app.delete('/api/suppliers/:id', async (req, res) => {
 // 4. ADD ITEM TO SUPPLIER
 app.post('/api/suppliers/:id/items', async (req, res) => {
   const supplierId = req.params.id;
-  const { name } = req.body;
+  const { description, quantity, rateWoGst, gstPercent, totalAmount } = req.body;
   const itmId = `itm_${Date.now()}`;
 
   if (pool) {
     try {
       await pool.query(
-        'INSERT INTO supplier_items (id, supplier_id, name, rate, paid) VALUES ($1, $2, $3, $4, $5)',
-        [itmId, supplierId, name, 0, 0]
+        `INSERT INTO supplier_items (id, supplier_id, description, quantity, rate_wo_gst, gst_percent, total_amount) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [itmId, supplierId, description, quantity || '1', rateWoGst || 0, gstPercent || 0, totalAmount || 0]
       );
       return res.json({ success: true, id: itmId });
     } catch (err) {
@@ -146,7 +176,14 @@ app.post('/api/suppliers/:id/items', async (req, res) => {
 
   const sup = localMemorySuppliers.find(s => s.id === supplierId);
   if (sup) {
-    sup.items.push({ id: itmId, name, rate: 0, paid: 0 });
+    sup.items.push({
+      id: itmId,
+      description,
+      quantity: quantity || '1',
+      rateWoGst: rateWoGst || 0,
+      gstPercent: gstPercent || 0,
+      totalAmount: totalAmount || 0
+    });
   }
   res.json({ success: true, id: itmId });
 });
@@ -170,56 +207,92 @@ app.delete('/api/items/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-// 6. SAVE WEEKLY SETTLEMENT (UPDATE RATES, PAID, AND RECORD HISTORY)
+// 6. SAVE WEEKLY SETTLEMENT (INVOICE, ITEMS & LUMP-SUM WEEKLY PAYMENT)
 app.post('/api/settlements', async (req, res) => {
-  const { supplierId, weekLabel, settledDate, paymentMode, totalBill, totalPaid, due, status, items } = req.body;
+  const { 
+    supplierId, 
+    invoiceNo, 
+    invoiceDate, 
+    weekLabel, 
+    settledDate, 
+    paymentMode, 
+    totalBill, 
+    paidAmount, 
+    due, 
+    status, 
+    items 
+  } = req.body;
 
   if (pool) {
     try {
-      // 1. Update rates and paid for items
+      // 1. Update supplier table with latest invoice & payment info
+      await pool.query(
+        `UPDATE suppliers 
+         SET invoice_no = $1, invoice_date = $2, paid_amount = $3, payment_mode = $4 
+         WHERE id = $5`,
+        [invoiceNo || '', invoiceDate || '', paidAmount || 0, paymentMode || 'PhonePe / UPI', supplierId]
+      );
+
+      // 2. Update or insert items
       if (items && Array.isArray(items)) {
         for (const itm of items) {
-          await pool.query(
-            'UPDATE supplier_items SET rate = $1, paid = $2 WHERE id = $3 AND supplier_id = $4',
-            [itm.rate || 0, itm.paid || 0, itm.id, supplierId]
+          const updateRes = await pool.query(
+            `UPDATE supplier_items 
+             SET description = $1, quantity = $2, rate_wo_gst = $3, gst_percent = $4, total_amount = $5 
+             WHERE id = $6 AND supplier_id = $7`,
+            [itm.description || itm.name, itm.quantity || '1', itm.rateWoGst || 0, itm.gstPercent || 0, itm.totalAmount || 0, itm.id, supplierId]
           );
+
+          if (updateRes.rowCount === 0) {
+            await pool.query(
+              `INSERT INTO supplier_items (id, supplier_id, description, quantity, rate_wo_gst, gst_percent, total_amount) 
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [itm.id || `itm_${Date.now()}`, supplierId, itm.description || itm.name, itm.quantity || '1', itm.rateWoGst || 0, itm.gstPercent || 0, itm.totalAmount || 0]
+            );
+          }
         }
       }
 
-      // 2. Upsert Weekly History entry
+      // 3. Record Weekly History
       const histId = `hist_${supplierId}_${Date.now()}`;
       await pool.query(
         `INSERT INTO weekly_history 
-         (id, supplier_id, week_label, settled_date, payment_mode, total_bill, total_paid, due, status, items_json) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [histId, supplierId, weekLabel, settledDate, paymentMode, totalBill, totalPaid, due, status, JSON.stringify(items)]
+         (id, supplier_id, invoice_no, invoice_date, week_label, settled_date, payment_mode, total_bill, total_paid, due, status, items_json) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [histId, supplierId, invoiceNo || '', invoiceDate || '', weekLabel, settledDate, paymentMode, totalBill, paidAmount, due, status, JSON.stringify(items)]
       );
 
-      return res.json({ success: true, message: 'Settlement saved to PostgreSQL' });
+      return res.json({ success: true, message: 'Weekly settlement saved to PostgreSQL' });
     } catch (err) {
       console.error('Error saving settlement:', err.message);
       return res.status(500).json({ error: err.message });
     }
   }
 
-  // Local fallback
+  // Local memory fallback
   const sup = localMemorySuppliers.find(s => s.id === supplierId);
   if (sup) {
+    sup.invoiceNo = invoiceNo || '';
+    sup.invoiceDate = invoiceDate || '';
+    sup.paidAmount = paidAmount || 0;
+    sup.paymentMode = paymentMode || 'PhonePe / UPI';
     sup.items = items;
     if (!sup.history) sup.history = [];
     sup.history.unshift({
       id: `hist_${Date.now()}`,
+      invoiceNo,
+      invoiceDate,
       weekLabel,
       settledDate,
       paymentMode,
       totalBill,
-      totalPaid,
+      totalPaid: paidAmount,
       due,
       status,
       items
     });
   }
-  res.json({ success: true, message: 'Settlement saved to memory' });
+  res.json({ success: true, message: 'Weekly settlement saved to memory' });
 });
 
 // 7. CLEAR CURRENT WEEK ENTRIES
@@ -228,7 +301,14 @@ app.post('/api/suppliers/:id/clear-week', async (req, res) => {
 
   if (pool) {
     try {
-      await pool.query('UPDATE supplier_items SET rate = 0, paid = 0 WHERE supplier_id = $1', [supplierId]);
+      await pool.query(
+        'UPDATE suppliers SET paid_amount = 0 WHERE id = $1',
+        [supplierId]
+      );
+      await pool.query(
+        'UPDATE supplier_items SET rate_wo_gst = 0, total_amount = 0 WHERE supplier_id = $1',
+        [supplierId]
+      );
       return res.json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: err.message });
@@ -237,7 +317,8 @@ app.post('/api/suppliers/:id/clear-week', async (req, res) => {
 
   const sup = localMemorySuppliers.find(s => s.id === supplierId);
   if (sup) {
-    sup.items.forEach(it => { it.rate = 0; it.paid = 0; });
+    sup.paidAmount = 0;
+    sup.items.forEach(it => { it.rateWoGst = 0; it.totalAmount = 0; });
   }
   res.json({ success: true });
 });
