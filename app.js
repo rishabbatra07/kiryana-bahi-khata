@@ -741,7 +741,8 @@ function renderDesktopTable(suppliersList) {
   }
 
   suppliersList.forEach(sup => {
-    const { bill, paid, due, status } = getSupplierTotals(sup);
+    const totals = getSupplierTotals(sup);
+    const { itemsTotal, freight, bill, paid, due, status } = totals;
     const isExpanded = state.expandedSupplierId === sup.id;
 
     let statusBadge = '';
@@ -758,14 +759,15 @@ function renderDesktopTable(suppliersList) {
     const tr = document.createElement('tr');
     tr.className = `hover:bg-rose-50/50 transition cursor-pointer ${isExpanded ? 'bg-amber-50/50 border-l-4 border-l-rose-700' : ''}`;
     tr.onclick = (e) => {
-      if (['INPUT', 'BUTTON', 'A', 'I', 'SPAN', 'SELECT'].includes(e.target.tagName)) return;
+      // Don't trigger if user clicked inside other action buttons or inputs
+      if (e.target.closest('button, input, select, textarea, a')) return;
       toggleExpandSupplier(sup.id);
     };
 
     tr.innerHTML = `
       <td class="py-4 px-4 font-bold text-gray-900 text-base">
         <div class="flex items-center gap-2">
-          <span class="text-lg">${sup.name}</span>
+          <span class="text-lg hover:text-rose-900 transition" onclick="toggleExpandSupplier('${sup.id}')">${sup.name}</span>
         </div>
         <div class="flex flex-wrap items-center gap-2 mt-1 text-xs">
           <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-900 font-bold">📄 ${sup.invoiceNo || 'No Inv #'}</span>
@@ -776,9 +778,9 @@ function renderDesktopTable(suppliersList) {
       </td>
       <td class="py-4 px-4 text-gray-700 text-sm max-w-[220px]">
         <div class="truncate font-semibold">${itemsPreview || 'कोई सामान नहीं'}</div>
-        <span class="text-xs font-bold text-rose-800 hover:underline inline-flex items-center gap-1 mt-1">
-          ${isExpanded ? '▲ बंद करें' : '▼ बिल व सामान खोलें (View Bill)'}
-        </span>
+        <button type="button" onclick="toggleExpandSupplier('${sup.id}')" class="text-xs font-black text-rose-800 hover:text-rose-950 underline inline-flex items-center gap-1 mt-1 cursor-pointer">
+          ${isExpanded ? '▲ बंद करें (Hide Items)' : '▼ बिल व सामान खोलें (View Bill)'}
+        </button>
       </td>
       <td class="py-4 px-4 text-right font-black text-gray-900 text-lg">
         ₹ ${bill.toLocaleString('en-IN')}
@@ -1117,7 +1119,8 @@ function renderMobileCards(suppliersList) {
   container.innerHTML = '';
 
   suppliersList.forEach(sup => {
-    const { bill, paid, due, status } = getSupplierTotals(sup);
+    const totals = getSupplierTotals(sup);
+    const { itemsTotal, freight, bill, paid, due, status } = totals;
     const isExpanded = state.expandedSupplierId === sup.id;
 
     const card = document.createElement('div');

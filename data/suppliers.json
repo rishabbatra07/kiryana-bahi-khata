@@ -15,9 +15,7 @@
         "quantity": "10 पेटी",
         "rateWoGst": 500,
         "gstPercent": 5,
-        "totalAmount": 5250,
-        "hsnCode": "",
-        "rateWithGst": 0
+        "totalAmount": 5250
       },
       {
         "id": "itm_b2",
@@ -25,9 +23,7 @@
         "quantity": "2 बोरी",
         "rateWoGst": 1800,
         "gstPercent": 5,
-        "totalAmount": 3780,
-        "hsnCode": "",
-        "rateWithGst": 0
+        "totalAmount": 3780
       },
       {
         "id": "itm_b3",
@@ -35,9 +31,7 @@
         "quantity": "4 जार",
         "rateWoGst": 600,
         "gstPercent": 18,
-        "totalAmount": 2832,
-        "hsnCode": "",
-        "rateWithGst": 0
+        "totalAmount": 2832
       }
     ],
     "history": [
@@ -75,12 +69,10 @@
             "totalAmount": 2000
           }
         ],
-        "paymentDate": "31 Oct 2026",
-        "freight": 0
+        "paymentDate": "31 Oct 2026"
       }
     ],
-    "paymentDate": "2026-11-10",
-    "freight": 0
+    "paymentDate": "2026-11-10"
   },
   {
     "id": "sup_1",
@@ -98,9 +90,7 @@
         "quantity": "2 कार्टन",
         "rateWoGst": 5000,
         "gstPercent": 12,
-        "totalAmount": 11200,
-        "hsnCode": "",
-        "rateWithGst": 0
+        "totalAmount": 11200
       },
       {
         "id": "itm_2",
@@ -108,9 +98,7 @@
         "quantity": "3 पीपा",
         "rateWoGst": 2100,
         "gstPercent": 5,
-        "totalAmount": 6615,
-        "hsnCode": "",
-        "rateWithGst": 0
+        "totalAmount": 6615
       }
     ],
     "history": [
@@ -141,12 +129,10 @@
             "totalAmount": 5720
           }
         ],
-        "paymentDate": "02 Nov 2026",
-        "freight": 0
+        "paymentDate": "02 Nov 2026"
       }
     ],
-    "paymentDate": "2026-11-09",
-    "freight": 0
+    "paymentDate": "2026-11-09"
   },
   {
     "id": "sup_2",
@@ -164,9 +150,7 @@
         "quantity": "3 बोरी",
         "rateWoGst": 1600,
         "gstPercent": 0,
-        "totalAmount": 4800,
-        "hsnCode": "",
-        "rateWithGst": 0
+        "totalAmount": 4800
       },
       {
         "id": "itm_5",
@@ -174,9 +158,7 @@
         "quantity": "2 बोरी",
         "rateWoGst": 4200,
         "gstPercent": 0,
-        "totalAmount": 8400,
-        "hsnCode": "",
-        "rateWithGst": 0
+        "totalAmount": 8400
       },
       {
         "id": "itm_6",
@@ -184,9 +166,7 @@
         "quantity": "3 कट्टा",
         "rateWoGst": 2400,
         "gstPercent": 5,
-        "totalAmount": 7560,
-        "hsnCode": "",
-        "rateWithGst": 0
+        "totalAmount": 7560
       }
     ],
     "history": [
@@ -224,12 +204,10 @@
             "totalAmount": 8000
           }
         ],
-        "paymentDate": "01 Nov 2026",
-        "freight": 0
+        "paymentDate": "01 Nov 2026"
       }
     ],
-    "paymentDate": "2026-11-08",
-    "freight": 0
+    "paymentDate": "2026-11-08"
   },
   {
     "id": "sup_1794330750456",
@@ -248,7 +226,7 @@
         "description": "Mustard Oil 15 Kg Tin First",
         "hsnCode": "15149120",
         "quantity": "5 TIN",
-        "rateWoGst": 2761.9,
+        "rateWoGst": 2761.90,
         "gstPercent": 5,
         "rateWithGst": 2900,
         "totalAmount": 14500
@@ -258,7 +236,7 @@
         "description": "Refind Soya Oil 15 Kg Tin First",
         "hsnCode": "15079010",
         "quantity": "5 TIN",
-        "rateWoGst": 2361.9,
+        "rateWoGst": 2361.90,
         "gstPercent": 5,
         "rateWithGst": 2480,
         "totalAmount": 12400
@@ -292,7 +270,7 @@
           {
             "description": "Mustard Oil 15 Kg Tin First",
             "quantity": "5 TIN",
-            "rateWoGst": 2761.9,
+            "rateWoGst": 2761.90,
             "gstPercent": 5,
             "rateWithGst": 2900,
             "totalAmount": 14500
@@ -300,7 +278,7 @@
           {
             "description": "Refind Soya Oil 15 Kg Tin First",
             "quantity": "5 TIN",
-            "rateWoGst": 2361.9,
+            "rateWoGst": 2361.90,
             "gstPercent": 5,
             "rateWithGst": 2480,
             "totalAmount": 12400
