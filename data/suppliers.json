@@ -1,0 +1,206 @@
+[
+  {
+    "id": "sup_bhatla",
+    "name": "भाटला एजेंसी (Bhatla Agency)",
+    "phone": "9876543210",
+    "settlementDay": "शुक्रवार (Friday)",
+    "invoiceNo": "INV-8841",
+    "invoiceDate": "2026-11-10",
+    "paidAmount": 9000,
+    "paymentMode": "PhonePe / UPI",
+    "items": [
+      {
+        "id": "itm_b1",
+        "description": "गोल्डी गरम मसाला 100g पेटी (Goldiee Spices)",
+        "quantity": "10 पेटी",
+        "rateWoGst": 500,
+        "gstPercent": 5,
+        "totalAmount": 5250
+      },
+      {
+        "id": "itm_b2",
+        "description": "फॉर्च्यून बेसन 30kg बोरी (Fortune Besan)",
+        "quantity": "2 बोरी",
+        "rateWoGst": 1800,
+        "gstPercent": 5,
+        "totalAmount": 3780
+      },
+      {
+        "id": "itm_b3",
+        "description": "कैडबरी टॉफी जार (Cadbury Candies)",
+        "quantity": "4 जार",
+        "rateWoGst": 600,
+        "gstPercent": 18,
+        "totalAmount": 2832
+      }
+    ],
+    "history": [
+      {
+        "id": "hist_b_1",
+        "invoiceNo": "INV-8210",
+        "invoiceDate": "2026-11-03",
+        "weekLabel": "27 Oct - 02 Nov 2026",
+        "settledDate": "31 Oct 2026",
+        "paymentMode": "PhonePe / UPI",
+        "totalBill": 11800,
+        "totalPaid": 11800,
+        "due": 0,
+        "status": "PAID",
+        "items": [
+          {
+            "description": "मसाले पेटी (Spices Box)",
+            "quantity": "10 पेटी",
+            "rateWoGst": 570,
+            "gstPercent": 5,
+            "totalAmount": 6000
+          },
+          {
+            "description": "बेसन कट्टा (Besan Bag)",
+            "quantity": "2 बोरी",
+            "rateWoGst": 1800,
+            "gstPercent": 5,
+            "totalAmount": 3800
+          },
+          {
+            "description": "टॉफी जार (Toffee Jars)",
+            "quantity": "4 जार",
+            "rateWoGst": 423,
+            "gstPercent": 18,
+            "totalAmount": 2000
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sup_1",
+    "name": "श्री राम ऑयल & घी ट्रेडर्स (Shree Ram Oil & Ghee)",
+    "phone": "9810123456",
+    "settlementDay": "मंगलवार (Tuesday)",
+    "invoiceNo": "SR-4092",
+    "invoiceDate": "2026-11-09",
+    "paidAmount": 15000,
+    "paymentMode": "PhonePe / UPI",
+    "items": [
+      {
+        "id": "itm_1",
+        "description": "देसी घी 1 लीटर डिब्बा (Desi Ghee 1L x 12)",
+        "quantity": "2 कार्टन",
+        "rateWoGst": 5000,
+        "gstPercent": 12,
+        "totalAmount": 11200
+      },
+      {
+        "id": "itm_2",
+        "description": "सरसों तेल 15L पीपा (Mustard Oil)",
+        "quantity": "3 पीपा",
+        "rateWoGst": 2100,
+        "gstPercent": 5,
+        "totalAmount": 6615
+      }
+    ],
+    "history": [
+      {
+        "id": "hist_1_1",
+        "invoiceNo": "SR-3920",
+        "invoiceDate": "2026-11-02",
+        "weekLabel": "27 Oct - 02 Nov 2026",
+        "settledDate": "02 Nov 2026",
+        "paymentMode": "PhonePe / UPI",
+        "totalBill": 15800,
+        "totalPaid": 15800,
+        "due": 0,
+        "status": "PAID",
+        "items": [
+          {
+            "description": "देसी घी 1L डिब्बा (12 पीस)",
+            "quantity": "2 कार्टन",
+            "rateWoGst": 4500,
+            "gstPercent": 12,
+            "totalAmount": 10080
+          },
+          {
+            "description": "सरसों तेल पीपा",
+            "quantity": "2 पीपा",
+            "rateWoGst": 2723,
+            "gstPercent": 5,
+            "totalAmount": 5720
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sup_2",
+    "name": "महालक्ष्मी आटा चक्की & दाल (Mahalaxmi Atta & Dal)",
+    "phone": "9820234567",
+    "settlementDay": "शनिवार (Saturday)",
+    "invoiceNo": "ML-1102",
+    "invoiceDate": "2026-11-08",
+    "paidAmount": 20000,
+    "paymentMode": "चेक (Cheque)",
+    "items": [
+      {
+        "id": "itm_4",
+        "description": "चक्की आटा 50kg बोरी (Wheat Flour)",
+        "quantity": "3 बोरी",
+        "rateWoGst": 1600,
+        "gstPercent": 0,
+        "totalAmount": 4800
+      },
+      {
+        "id": "itm_5",
+        "description": "अरहर / तूर दाल 30kg बोरी (Toor Dal)",
+        "quantity": "2 बोरी",
+        "rateWoGst": 4200,
+        "gstPercent": 0,
+        "totalAmount": 8400
+      },
+      {
+        "id": "itm_6",
+        "description": "बासमती चावल 25kg कट्टा (Basmati Rice)",
+        "quantity": "3 कट्टा",
+        "rateWoGst": 2400,
+        "gstPercent": 5,
+        "totalAmount": 7560
+      }
+    ],
+    "history": [
+      {
+        "id": "hist_2_1",
+        "invoiceNo": "ML-1044",
+        "invoiceDate": "2026-11-01",
+        "weekLabel": "27 Oct - 02 Nov 2026",
+        "settledDate": "01 Nov 2026",
+        "paymentMode": "चेक (Cheque)",
+        "totalBill": 28000,
+        "totalPaid": 28000,
+        "due": 0,
+        "status": "PAID",
+        "items": [
+          {
+            "description": "चक्की आटा बोरी",
+            "quantity": "5 बोरी",
+            "rateWoGst": 1600,
+            "gstPercent": 0,
+            "totalAmount": 8000
+          },
+          {
+            "description": "अरहर दाल बोरी",
+            "quantity": "3 बोरी",
+            "rateWoGst": 4000,
+            "gstPercent": 0,
+            "totalAmount": 12000
+          },
+          {
+            "description": "बासमती चावल",
+            "quantity": "3 कट्टा",
+            "rateWoGst": 2540,
+            "gstPercent": 5,
+            "totalAmount": 8000
+          }
+        ]
+      }
+    ]
+  }
+]

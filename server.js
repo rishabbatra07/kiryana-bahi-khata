@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const path = require('path');
 const { pool, initDatabase, SEED_SUPPLIERS } = require('./db');
 
@@ -11,8 +12,34 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// Fallback in-memory storage if running locally without PostgreSQL
-let localMemorySuppliers = JSON.parse(JSON.stringify(SEED_SUPPLIERS));
+// Permanent Local Disk File Persistence (never loses data on restart)
+const DATA_FILE = path.join(__dirname, 'data', 'suppliers.json');
+
+function loadLocalSuppliers() {
+  if (fs.existsSync(DATA_FILE)) {
+    try {
+      const content = fs.readFileSync(DATA_FILE, 'utf8');
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch (e) {
+      console.error('Error reading suppliers.json:', e);
+    }
+  }
+  saveLocalSuppliers(SEED_SUPPLIERS);
+  return JSON.parse(JSON.stringify(SEED_SUPPLIERS));
+}
+
+function saveLocalSuppliers(data) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Error saving suppliers.json:', e);
+  }
+}
+
+let localMemorySuppliers = loadLocalSuppliers();
 
 // Initialize Database on Startup
 initDatabase();
@@ -134,6 +161,7 @@ app.post('/api/suppliers', async (req, res) => {
     items: items || [],
     history: []
   });
+  saveLocalSuppliers(localMemorySuppliers);
   res.json({ success: true, id: supplierId });
 });
 
@@ -152,6 +180,7 @@ app.delete('/api/suppliers/:id', async (req, res) => {
   }
 
   localMemorySuppliers = localMemorySuppliers.filter(s => s.id !== supplierId);
+  saveLocalSuppliers(localMemorySuppliers);
   res.json({ success: true, message: 'Supplier deleted from memory' });
 });
 
@@ -184,6 +213,7 @@ app.post('/api/suppliers/:id/items', async (req, res) => {
       gstPercent: gstPercent || 0,
       totalAmount: totalAmount || 0
     });
+    saveLocalSuppliers(localMemorySuppliers);
   }
   res.json({ success: true, id: itmId });
 });
@@ -204,6 +234,7 @@ app.delete('/api/items/:id', async (req, res) => {
   localMemorySuppliers.forEach(sup => {
     sup.items = sup.items.filter(i => i.id !== itemId);
   });
+  saveLocalSuppliers(localMemorySuppliers);
   res.json({ success: true });
 });
 
@@ -291,6 +322,7 @@ app.post('/api/settlements', async (req, res) => {
       status,
       items
     });
+    saveLocalSuppliers(localMemorySuppliers);
   }
   res.json({ success: true, message: 'Weekly settlement saved to memory' });
 });
@@ -319,6 +351,7 @@ app.post('/api/suppliers/:id/clear-week', async (req, res) => {
   if (sup) {
     sup.paidAmount = 0;
     sup.items.forEach(it => { it.rateWoGst = 0; it.totalAmount = 0; });
+    saveLocalSuppliers(localMemorySuppliers);
   }
   res.json({ success: true });
 });
@@ -341,6 +374,7 @@ app.delete('/api/history/:id', async (req, res) => {
       sup.history = sup.history.filter(h => h.id !== historyId);
     }
   });
+  saveLocalSuppliers(localMemorySuppliers);
   res.json({ success: true });
 });
 

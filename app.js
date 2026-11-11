@@ -288,39 +288,112 @@ window.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
 });
 
-// LOAD / SAVE (POSTGRESQL + LOCALSTORAGE FALLBACK)
+// RECOVER & MERGE ANY USER-ADDED TRADERS FROM PREVIOUS STORAGE VERSIONS
+function recoverAndMergeCustomSuppliers(currentList) {
+  const merged = Array.isArray(currentList) ? [...currentList] : [];
+  const oldKeys = ['kiryana_khata_suppliers', 'kiryana_khata_suppliers_v2', 'kiryana_khata_suppliers_v3'];
+
+  oldKeys.forEach(k => {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          list.forEach(oldSup => {
+            if (oldSup && oldSup.name) {
+              const alreadyExists = merged.some(s => 
+                (s.id && oldSup.id && s.id === oldSup.id) || 
+                (s.name && oldSup.name && s.name.trim().toLowerCase() === oldSup.name.trim().toLowerCase())
+              );
+
+              if (!alreadyExists) {
+                console.log(`🔄 Recovering user-added trader: ${oldSup.name}`);
+                const recoveredItems = (oldSup.items || []).map((it, idx) => ({
+                  id: it.id || `itm_${Date.now()}_${idx}`,
+                  description: it.description || it.name || 'किराना सामान',
+                  quantity: it.quantity || '1',
+                  rateWoGst: it.rateWoGst || it.rate || 0,
+                  gstPercent: it.gstPercent !== undefined ? it.gstPercent : 5,
+                  totalAmount: it.totalAmount || it.rate || 0
+                }));
+
+                const recoveredTrader = {
+                  id: oldSup.id || `sup_${Date.now()}`,
+                  name: oldSup.name,
+                  phone: oldSup.phone || '',
+                  settlementDay: oldSup.settlementDay || 'शनिवार (Saturday)',
+                  invoiceNo: oldSup.invoiceNo || 'INV-' + Math.floor(1000 + Math.random() * 9000),
+                  invoiceDate: oldSup.invoiceDate || new Date().toISOString().split('T')[0],
+                  paidAmount: oldSup.paidAmount || 0,
+                  paymentMode: oldSup.paymentMode || 'PhonePe / UPI',
+                  items: recoveredItems,
+                  history: oldSup.history || []
+                };
+
+                merged.push(recoveredTrader);
+
+                // Sync recovered trader to server so disk file also remembers it permanently
+                fetch('/api/suppliers', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(recoveredTrader)
+                }).catch(() => {});
+              }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Storage read error for key:', k, e);
+    }
+  });
+
+  return merged;
+}
+
+// LOAD / SAVE (POSTGRESQL + DISK + LOCALSTORAGE FALLBACK & MIGRATION)
 async function loadData() {
+  let loadedList = [];
+
+  // 1. Fetch from server (PostgreSQL or persistent disk file)
   try {
     const res = await fetch('/api/suppliers');
     if (res.ok) {
       const json = await res.json();
       if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-        state.suppliers = json.data;
-        persistData();
-        renderView();
-        console.log(`🐘 Loaded ${state.suppliers.length} suppliers from PostgreSQL (${json.source})`);
-        return;
+        loadedList = json.data;
       }
     }
   } catch (err) {
-    console.log('PostgreSQL API not reachable, falling back to local storage:', err);
+    console.log('Server not reachable, checking local storage:', err);
   }
 
-  const saved = localStorage.getItem('kiryana_khata_suppliers_v3');
-  if (saved) {
-    try {
-      state.suppliers = JSON.parse(saved);
-    } catch (e) {
-      state.suppliers = JSON.parse(JSON.stringify(DEFAULT_SUPPLIERS));
+  // 2. If server was empty, check browser local storage
+  if (loadedList.length === 0) {
+    const saved = localStorage.getItem('kiryana_khata_suppliers_v3') || 
+                  localStorage.getItem('kiryana_khata_suppliers_v2') || 
+                  localStorage.getItem('kiryana_khata_suppliers');
+    if (saved) {
+      try {
+        loadedList = JSON.parse(saved);
+      } catch (e) {
+        loadedList = JSON.parse(JSON.stringify(DEFAULT_SUPPLIERS));
+      }
+    } else {
+      loadedList = JSON.parse(JSON.stringify(DEFAULT_SUPPLIERS));
     }
-  } else {
-    state.suppliers = JSON.parse(JSON.stringify(DEFAULT_SUPPLIERS));
-    persistData();
   }
+
+  // 3. Auto-recover and merge any custom traders added by user in any previous session
+  state.suppliers = recoverAndMergeCustomSuppliers(loadedList);
+  persistData();
+  renderView();
 }
 
 function persistData() {
   localStorage.setItem('kiryana_khata_suppliers_v3', JSON.stringify(state.suppliers));
+  localStorage.setItem('kiryana_khata_suppliers_v2', JSON.stringify(state.suppliers));
+  localStorage.setItem('kiryana_khata_suppliers', JSON.stringify(state.suppliers));
 }
 
 // WEEK MANAGEMENT
