@@ -836,6 +836,25 @@ app.delete('/api/rates/:id', async (req, res) => {
   res.json({ success: true, id: rateId });
 });
 
+// BULK DELETE RATE ITEMS
+app.post('/api/rates/bulk-delete', async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
+  if (ids.length > 0) {
+    localMemoryRates = localMemoryRates.filter(r => !ids.includes(r.id));
+    saveLocalRates(localMemoryRates);
+
+    if (pool) {
+      try {
+        await pool.query('DELETE FROM daily_rate_list WHERE id = ANY($1)', [ids]);
+      } catch (e) {
+        console.error('DB bulk delete rates error:', e.message);
+      }
+    }
+  }
+
+  res.json({ success: true, deletedCount: ids.length, remainingCount: localMemoryRates.length });
+});
+
 // Serve frontend for all other routes
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));

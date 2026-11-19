@@ -419,12 +419,83 @@
         </div>
       </div>
 
+      <!-- QUICK ADD RATE ITEM CARD (2-SECOND DIRECT ENTRY) -->
+      <div class="no-print bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 border-2 border-emerald-300 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-emerald-700 text-white flex items-center justify-center text-base font-black shadow-inner">+</span>
+            <h3 class="font-black text-emerald-950 text-sm md:text-base flex items-center gap-2">
+              ⚡ नया सामान तुरंत जोड़ें (Quick Add Rate Item)
+              <span class="text-[11px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-full hidden sm:inline">बिना फॉर्म खोले 2 सेकंड में जोड़ें</span>
+            </h3>
+          </div>
+          <button type="button" onclick="openAddRateItemModal()" class="text-xs font-black text-emerald-800 hover:text-emerald-950 hover:underline flex items-center gap-1">
+            <span>+ विस्तृत फॉर्म (Detailed)</span>
+          </button>
+        </div>
+        
+        <form onsubmit="handleQuickAddRate(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-2.5 items-end">
+          <div class="md:col-span-2">
+            <label class="block text-[11px] font-black text-emerald-950 uppercase mb-1">सामान का नाम (Name) *</label>
+            <input type="text" id="quick-rate-name" required placeholder="उदा. Fortune Soyabean Oil 15L" class="w-full px-3 py-2 bg-white border-2 border-emerald-300 rounded-xl font-bold text-xs text-gray-900 focus:outline-none focus:border-emerald-600 shadow-2xs">
+          </div>
+          <div>
+            <label class="block text-[11px] font-black text-emerald-950 uppercase mb-1">वर्ग (Category)</label>
+            <select id="quick-rate-cat" class="w-full px-2 py-2 bg-white border-2 border-emerald-300 rounded-xl font-bold text-xs text-gray-900 focus:outline-none focus:border-emerald-600 shadow-2xs">
+              <option value="खाद्य तेल व घी">🛢️ खाद्य तेल व घी</option>
+              <option value="अनाज व आटा">🌾 अनाज व आटा</option>
+              <option value="दालें व बेसन">🥣 दालें व बेसन</option>
+              <option value="चीनी, नमक व मसाले">🧂 चीनी, नमक व मसाले</option>
+              <option value="अन्य किराना">📦 अन्य किराना</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-black text-emerald-950 uppercase mb-1">पैकिंग / इकाई (Unit)</label>
+            <input type="text" id="quick-rate-unit" placeholder="15 Kg TIN" value="15 Kg TIN" class="w-full px-2.5 py-2 bg-white border-2 border-emerald-300 rounded-xl font-bold text-xs text-gray-900 focus:outline-none focus:border-emerald-600 shadow-2xs">
+          </div>
+          <div>
+            <label class="block text-[11px] font-black text-amber-950 uppercase mb-1">खरीद भाव (Buy ₹) *</label>
+            <input type="number" step="any" id="quick-rate-buy" required placeholder="0" class="w-full px-2.5 py-2 bg-white border-2 border-amber-300 rounded-xl font-black text-xs text-amber-950 focus:outline-none focus:border-amber-600 shadow-2xs">
+          </div>
+          <div>
+            <label class="block text-[11px] font-black text-emerald-950 uppercase mb-1">बिक्री भाव (Sell ₹) *</label>
+            <input type="number" step="any" id="quick-rate-sell" required placeholder="0" class="w-full px-2.5 py-2 bg-white border-2 border-emerald-400 rounded-xl font-black text-xs text-emerald-950 focus:outline-none focus:border-emerald-600 shadow-2xs">
+          </div>
+          <div>
+            <button type="submit" class="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-black rounded-xl text-xs flex items-center justify-center gap-1 shadow-md transition cursor-pointer">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>+ जोड़ें (Add)</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- BULK ACTIONS BAR (Multi-select delete) -->
+      <div id="rate-bulk-actions-bar" class="hidden no-print bg-rose-50 border-2 border-rose-300 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm animate-fade-in">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-lg bg-rose-600 text-white font-black flex items-center justify-center text-sm shadow-sm" id="rate-selected-count">0</span>
+          <span class="font-black text-rose-950 text-sm">सामान चुने गए (Items Selected for Action)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="clearSelectedRates()" class="px-3.5 py-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-xl text-xs font-bold transition">
+            ✕ रद्द करें (Cancel)
+          </button>
+          <button type="button" onclick="deleteSelectedRateItems()" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md transition cursor-pointer">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <span>🗑️ चुने हुए सामान हटाएं (Delete Selected)</span>
+          </button>
+        </div>
+      </div>
+
       <!-- RATES TABLE CONTAINER (DESKTOP) -->
       <div id="rate-desktop-table-container" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-amber-950 text-white text-sm font-extrabold uppercase tracking-wide">
+                <th class="py-3.5 px-3 text-center w-12 no-print">
+                  <input type="checkbox" id="rate-select-all" onchange="toggleSelectAllRates(this.checked)" class="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer" title="सभी चुनें / हटाएं">
+                </th>
                 <th class="py-3.5 px-4">सामान व ब्रांड (Commodity / Item)</th>
                 <th class="py-3.5 px-3">वर्ग (Category)</th>
                 <th class="py-3.5 px-3">पैकिंग / इकाई (Unit)</th>
@@ -433,7 +504,7 @@
                 <th class="py-3.5 px-3 text-center">आज का ट्रेंड</th>
                 <th class="py-3.5 px-3 text-right">दुकान मुनाफा (Margin)</th>
                 <th class="py-3.5 px-3">सप्लायर / स्रोत</th>
-                <th class="py-3.5 px-3 text-center no-print">एक्शन</th>
+                <th class="py-3.5 px-4 text-center no-print">सामान एक्शन (हटाएं / बदलें)</th>
               </tr>
             </thead>
             <tbody id="rate-desktop-table-body" class="divide-y divide-gray-200 text-sm font-semibold">
@@ -1139,14 +1210,20 @@
         </div>
       </div>
 
-      <div class="flex items-center justify-end gap-3 pt-3 border-t">
-        <button onclick="closeAddRateItemModal()" class="px-4 py-2 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition">
-          रद्द करें
+      <div class="flex items-center justify-between gap-3 pt-3 border-t">
+        <button type="button" id="modal-delete-rate-btn" onclick="deleteCurrentRateItemFromModal()" class="hidden px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
+          <i data-lucide="trash-2" class="w-4 h-4 text-rose-600"></i>
+          <span>🗑️ यह सामान हटाएं (Delete Item)</span>
         </button>
-        <button onclick="saveRateItem()" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-rose-950 font-black rounded-xl shadow-md transition flex items-center gap-1.5">
-          <i data-lucide="check" class="w-4 h-4"></i>
-          <span>✓ रेट सेव करें (Save Rate)</span>
-        </button>
+        <div class="flex items-center gap-3 ml-auto">
+          <button type="button" onclick="closeAddRateItemModal()" class="px-4 py-2 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition">
+            रद्द करें
+          </button>
+          <button type="button" onclick="saveRateItem()" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-rose-950 font-black rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>✓ रेट सेव करें (Save Rate)</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

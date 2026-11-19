@@ -408,6 +408,7 @@ let state = {
   rateSearchQuery: '',
   rateCategoryFilter: 'ALL',
   rates: [],
+  selectedRateIds: [],
   bulkRatesDraft: [],
   suppliers: []
 };
@@ -3143,10 +3144,26 @@ function renderRateListView() {
     return matchesCat && matchesQuery;
   });
 
+  // Update Bulk Actions Bar & Select-All Checkbox
+  const bulkBar = document.getElementById('rate-bulk-actions-bar');
+  const countEl = document.getElementById('rate-selected-count');
+  const selectAllCb = document.getElementById('rate-select-all');
+  if (bulkBar && countEl) {
+    if (state.selectedRateIds && state.selectedRateIds.length > 0) {
+      bulkBar.classList.remove('hidden');
+      countEl.textContent = state.selectedRateIds.length;
+    } else {
+      bulkBar.classList.add('hidden');
+    }
+  }
+  if (selectAllCb) {
+    selectAllCb.checked = filteredRates.length > 0 && filteredRates.every(r => (state.selectedRateIds || []).includes(r.id));
+  }
+
   if (filteredRates.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="9" class="py-12 text-center text-gray-400 font-bold text-base">
+        <td colspan="10" class="py-12 text-center text-gray-400 font-bold text-base">
           कोई सामान या भाव नहीं मिला (No rate items found)
         </td>
       </tr>
@@ -3182,9 +3199,19 @@ function renderRateListView() {
       shiftBadge = `<span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-bold text-xs inline-flex items-center gap-1">स्थिर ⚪</span>`;
     }
 
+    const isChecked = (state.selectedRateIds || []).includes(r.id);
     const tr = document.createElement('tr');
-    tr.className = "hover:bg-amber-50/40 transition";
+    tr.className = `transition ${isChecked ? 'bg-rose-50/70 border-l-4 border-rose-500' : 'hover:bg-amber-50/40'}`;
     tr.innerHTML = `
+      <td class="py-3.5 px-3 text-center no-print">
+        <input 
+          type="checkbox" 
+          class="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer" 
+          ${isChecked ? 'checked' : ''} 
+          onchange="toggleSelectRateItem('${r.id}', this.checked)"
+          title="यह सामान चुनें"
+        >
+      </td>
       <td class="py-3.5 px-4">
         <div class="font-black text-gray-950 text-base flex items-center gap-2">
           <span>${r.hindiName || r.name}</span>
@@ -3244,13 +3271,15 @@ function renderRateListView() {
         <div class="text-xs font-bold text-gray-800 truncate max-w-[150px]">${r.supplierName || 'खुला भाव'}</div>
         <div class="text-[10px] text-gray-400 font-medium mt-0.5">📅 ${r.lastUpdated || 'आज'}</div>
       </td>
-      <td class="py-3.5 px-3 text-center no-print">
+      <td class="py-3.5 px-4 text-center no-print">
         <div class="flex items-center justify-center gap-1.5">
-          <button onclick="openAddRateItemModal('${r.id}')" title="बदलें / संपादित करें" class="p-1.5 text-gray-600 hover:text-amber-700 hover:bg-amber-100 rounded-lg transition">
-            <i data-lucide="edit-3" class="w-4 h-4"></i>
+          <button onclick="openAddRateItemModal('${r.id}')" title="सामान व भाव बदलें" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-black inline-flex items-center gap-1 transition cursor-pointer">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-700"></i>
+            <span>बदलें</span>
           </button>
-          <button onclick="deleteRateItem('${r.id}')" title="हटाएं" class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <button onclick="deleteRateItem('${r.id}')" title="रेट लिस्ट से हमेशा के लिए हटाएं" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-300 rounded-lg text-xs font-black inline-flex items-center gap-1 transition shadow-2xs group cursor-pointer">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-600 group-hover:text-white"></i>
+            <span>🗑️ हटाएं</span>
           </button>
         </div>
       </td>
@@ -3260,14 +3289,23 @@ function renderRateListView() {
     // Mobile Card
     if (mobileContainer) {
       const mCard = document.createElement('div');
-      mCard.className = "bg-white p-4 rounded-2xl border-2 border-gray-200 shadow-sm space-y-3";
+      mCard.className = `p-4 rounded-2xl border-2 shadow-sm space-y-3 transition ${isChecked ? 'bg-rose-50/50 border-rose-400' : 'bg-white border-gray-200'}`;
       mCard.innerHTML = `
         <div class="flex items-start justify-between gap-2 border-b pb-2">
-          <div>
-            <h4 class="font-black text-gray-950 text-base leading-tight">${r.hindiName || r.name}</h4>
-            <div class="flex items-center gap-1.5 mt-1 text-xs">
-              <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded font-bold">${r.category}</span>
-              <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded font-bold">${r.unit}</span>
+          <div class="flex items-start gap-2.5">
+            <input 
+              type="checkbox" 
+              class="w-5 h-5 rounded text-rose-600 focus:ring-rose-500 cursor-pointer mt-0.5" 
+              ${isChecked ? 'checked' : ''} 
+              onchange="toggleSelectRateItem('${r.id}', this.checked)"
+              title="यह सामान चुनें"
+            >
+            <div>
+              <h4 class="font-black text-gray-950 text-base leading-tight">${r.hindiName || r.name}</h4>
+              <div class="flex items-center gap-1.5 mt-1 text-xs">
+                <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded font-bold">${r.category}</span>
+                <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded font-bold">${r.unit}</span>
+              </div>
             </div>
           </div>
           <div>${shiftBadge}</div>
@@ -3297,8 +3335,14 @@ function renderRateListView() {
         <div class="flex items-center justify-between text-xs font-bold pt-1">
           <span class="text-emerald-800">मुनाफा: <strong>₹${marginRs} (${marginPct}%)</strong></span>
           <div class="flex items-center gap-2">
-            <button onclick="openAddRateItemModal('${r.id}')" class="text-amber-800 font-bold text-xs hover:underline">संपादित करें</button>
-            <button onclick="deleteRateItem('${r.id}')" class="text-rose-600 font-bold text-xs hover:underline">हटाएं</button>
+            <button onclick="openAddRateItemModal('${r.id}')" class="px-2.5 py-1 bg-amber-50 text-amber-900 border border-amber-300 rounded-lg font-black text-xs flex items-center gap-1">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              <span>बदलें</span>
+            </button>
+            <button onclick="deleteRateItem('${r.id}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-300 rounded-lg font-black text-xs flex items-center gap-1 transition">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>🗑️ हटाएं</span>
+            </button>
           </div>
         </div>
       `;
@@ -3345,15 +3389,149 @@ function updateRateItemDirect(id, field, value) {
   }).catch(() => {});
 }
 
+// Quick Add Rate Item Directly From Card (2-second entry)
+function handleQuickAddRate(e) {
+  if (e) e.preventDefault();
+  const nameInput = document.getElementById('quick-rate-name');
+  const catInput = document.getElementById('quick-rate-cat');
+  const unitInput = document.getElementById('quick-rate-unit');
+  const buyInput = document.getElementById('quick-rate-buy');
+  const sellInput = document.getElementById('quick-rate-sell');
+
+  const name = (nameInput?.value || '').trim();
+  const category = catInput?.value || 'अन्य किराना';
+  const unit = (unitInput?.value || '').trim() || '15 Kg TIN';
+  const buyRate = parseFloat(buyInput?.value) || 0;
+  const sellRate = parseFloat(sellInput?.value) || 0;
+
+  if (!name) {
+    alert(state.currentLang === 'hi' ? 'कृपया सामान का नाम लिखें' : 'Please enter item name');
+    nameInput?.focus();
+    return;
+  }
+  if (buyRate <= 0) {
+    alert(state.currentLang === 'hi' ? 'कृपया खरीद भाव (Buy Rate) दर्ज करें' : 'Please enter buy rate');
+    buyInput?.focus();
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const newRate = {
+    id: `rate_${Date.now()}`,
+    name: name,
+    hindiName: name,
+    category: category,
+    unit: unit,
+    hsnCode: '',
+    buyRate: buyRate,
+    prevBuyRate: buyRate,
+    sellRate: sellRate > 0 ? sellRate : buyRate,
+    prevSellRate: sellRate > 0 ? sellRate : buyRate,
+    supplierName: 'दुकानदार एंट्री',
+    notes: 'त्वरित एंट्री',
+    lastUpdated: todayStr
+  };
+
+  state.rates.unshift(newRate);
+  persistRatesData();
+  renderRateListView();
+
+  // Reset inputs
+  if (nameInput) nameInput.value = '';
+  if (buyInput) buyInput.value = '';
+  if (sellInput) sellInput.value = '';
+  if (nameInput) nameInput.focus();
+
+  if (typeof playSoundboxChime === 'function') playSoundboxChime();
+  showToast(state.currentLang === 'hi' ? `'${name}' रेट लिस्ट में जुड़ गया! ✓` : `'${name}' added to rate list! ✓`);
+
+  fetch('/api/rates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newRate)
+  }).catch(() => {});
+}
+
+// Bulk Selection Handlers
+function toggleSelectRateItem(id, checked) {
+  if (!state.selectedRateIds) state.selectedRateIds = [];
+  if (checked) {
+    if (!state.selectedRateIds.includes(id)) {
+      state.selectedRateIds.push(id);
+    }
+  } else {
+    state.selectedRateIds = state.selectedRateIds.filter(item => item !== id);
+  }
+  renderRateListView();
+}
+
+function toggleSelectAllRates(checked) {
+  const query = (document.getElementById('rate-search-input')?.value || '').toLowerCase().trim();
+  const filteredRates = state.rates.filter(r => {
+    const matchesCat = state.rateCategoryFilter === 'ALL' || r.category === state.rateCategoryFilter;
+    const matchesQuery = !query || 
+      String(r.name || '').toLowerCase().includes(query) || 
+      String(r.hindiName || '').toLowerCase().includes(query) || 
+      String(r.hsnCode || '').toLowerCase().includes(query) || 
+      String(r.supplierName || '').toLowerCase().includes(query) ||
+      String(r.category || '').toLowerCase().includes(query);
+    return matchesCat && matchesQuery;
+  });
+
+  if (!state.selectedRateIds) state.selectedRateIds = [];
+  if (checked) {
+    const currentFilteredIds = filteredRates.map(r => r.id);
+    state.selectedRateIds = Array.from(new Set([...state.selectedRateIds, ...currentFilteredIds]));
+  } else {
+    const currentFilteredIds = new Set(filteredRates.map(r => r.id));
+    state.selectedRateIds = state.selectedRateIds.filter(id => !currentFilteredIds.has(id));
+  }
+  renderRateListView();
+}
+
+function clearSelectedRates() {
+  state.selectedRateIds = [];
+  renderRateListView();
+}
+
+function deleteSelectedRateItems() {
+  const count = (state.selectedRateIds || []).length;
+  if (count === 0) return;
+
+  const confirmMsg = state.currentLang === 'hi'
+    ? `क्या आप चुने हुए ${count} सामानों को रेट लिस्ट से हटाना चाहते हैं?`
+    : `Delete ${count} selected items from rate list?`;
+
+  if (confirm(confirmMsg)) {
+    const idsToDelete = [...state.selectedRateIds];
+    state.rates = state.rates.filter(r => !idsToDelete.includes(r.id));
+    state.selectedRateIds = [];
+    persistRatesData();
+    renderRateListView();
+
+    showToast(state.currentLang === 'hi' ? `${count} सामान रेट लिस्ट से हटा दिए गए! 🗑️` : `${count} items deleted!`);
+
+    fetch('/api/rates/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: idsToDelete })
+    }).catch(() => {
+      idsToDelete.forEach(id => fetch(`/api/rates/${id}`, { method: 'DELETE' }).catch(() => {}));
+    });
+  }
+}
+
 // Open Add / Edit Rate Item Modal
 function openAddRateItemModal(editId = null) {
   const modal = document.getElementById('modal-add-rate-item');
   const title = document.getElementById('modal-rate-item-title');
+  const deleteBtn = document.getElementById('modal-delete-rate-btn');
   if (!modal) return;
 
   if (editId) {
     const r = state.rates.find(item => item.id === editId);
     if (!r) return;
+    if (deleteBtn) deleteBtn.classList.remove('hidden');
     title.innerHTML = `<i data-lucide="edit" class="w-6 h-6 text-amber-600"></i> सामान का भाव बदलें`;
     document.getElementById('rate-form-id').value = r.id;
     document.getElementById('rate-form-name').value = r.name || '';
@@ -3366,6 +3544,7 @@ function openAddRateItemModal(editId = null) {
     document.getElementById('rate-form-supplier').value = r.supplierName || '';
     document.getElementById('rate-form-notes').value = r.notes || '';
   } else {
+    if (deleteBtn) deleteBtn.classList.add('hidden');
     title.innerHTML = `<i data-lucide="tag" class="w-6 h-6 text-amber-600"></i> रेट लिस्ट में नया सामान जोड़ें`;
     document.getElementById('rate-form-id').value = '';
     document.getElementById('rate-form-name').value = '';
@@ -3387,6 +3566,13 @@ function openAddRateItemModal(editId = null) {
 function closeAddRateItemModal() {
   const modal = document.getElementById('modal-add-rate-item');
   if (modal) modal.classList.add('hidden');
+}
+
+function deleteCurrentRateItemFromModal() {
+  const idVal = document.getElementById('rate-form-id')?.value;
+  if (!idVal) return;
+  closeAddRateItemModal();
+  deleteRateItem(idVal);
 }
 
 function calcFormMargin() {
@@ -3481,14 +3667,17 @@ function deleteRateItem(id) {
   if (!r) return;
 
   const confirmMsg = state.currentLang === 'hi' 
-    ? `क्या आप '${r.hindiName || r.name}' को रेट लिस्ट से हटाना चाहते हैं?` 
-    : `Remove '${r.name}' from rate list?`;
+    ? `क्या आप '${r.hindiName || r.name}' को रेट लिस्ट से हमेशा के लिए हटाना चाहते हैं?` 
+    : `Permanently delete '${r.name}' from rate list?`;
 
   if (confirm(confirmMsg)) {
     state.rates = state.rates.filter(item => item.id !== id);
+    if (state.selectedRateIds) {
+      state.selectedRateIds = state.selectedRateIds.filter(item => item !== id);
+    }
     persistRatesData();
     renderRateListView();
-    showToast(state.currentLang === 'hi' ? "सामान हटा दिया गया" : "Item deleted");
+    showToast(state.currentLang === 'hi' ? `'${r.hindiName || r.name}' हटा दिया गया 🗑️` : "Item deleted");
 
     fetch(`/api/rates/${id}`, { method: 'DELETE' }).catch(() => {});
   }
