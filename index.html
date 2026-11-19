@@ -96,8 +96,21 @@
         </div>
       </div>
 
-      <!-- Controls: View Switcher, Language Toggle, Print -->
+      <!-- Controls: Navigation Tabs, View Switcher, Language Toggle, Print -->
       <div class="flex items-center gap-2 flex-wrap">
+        <!-- Main Navigation: Ledger vs Daily Rate List -->
+        <div class="bg-rose-950/80 p-1 rounded-xl flex items-center border border-amber-400/40 shadow-inner">
+          <button id="nav-tab-ledger" onclick="switchMainTab('ledger')" class="px-3.5 py-1.5 rounded-lg text-sm font-black flex items-center gap-1.5 bg-amber-400 text-rose-950 shadow-sm transition">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span>📒 सप्लायर खाता</span>
+          </button>
+          <button id="nav-tab-rates" onclick="switchMainTab('rates')" class="px-3.5 py-1.5 rounded-lg text-sm font-black flex items-center gap-1.5 text-amber-200 hover:text-white transition">
+            <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+            <span>📋 दैनिक रेट लिस्ट</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-emerald-500 text-white text-[10px] font-black animate-pulse">भाव</span>
+          </button>
+        </div>
+
         <!-- View Mode: Desktop Table vs Mobile App Simulator -->
         <div class="bg-rose-950/60 p-1 rounded-xl flex items-center border border-rose-800">
           <button id="btn-view-desktop" onclick="setViewMode('desktop')" class="px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 bg-white text-rose-950 shadow-sm transition">
@@ -140,6 +153,11 @@
 
   <!-- MAIN CONTAINER -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- ========================================== -->
+    <!-- 1. SUPPLIER LEDGER SECTION (सप्लायर खाता)  -->
+    <!-- ========================================== -->
+    <section id="section-supplier-ledger" class="space-y-6">
 
     <!-- WEEK SELECTOR BAR -->
     <div class="no-print bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-3">
@@ -291,6 +309,145 @@
         </div>
       </div>
     </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. DAILY RATE LIST SECTION (दैनिक भाव सूची) -->
+    <!-- ========================================== -->
+    <section id="section-daily-rate-list" class="space-y-6 hidden">
+      <!-- TOP ACTION BAR FOR RATES -->
+      <div class="no-print bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-amber-400 text-rose-950 font-black flex items-center justify-center text-xl shadow-inner border border-amber-300">
+            ₹
+          </div>
+          <div>
+            <h2 class="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2">
+              दैनिक मंडी व दुकान रेट लिस्ट (Daily Rate Board)
+              <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">Live Rates</span>
+            </h2>
+            <p class="text-xs text-gray-500 font-semibold" id="rate-date-display">
+              📅 आज का भाव: गुरुवार, 19 नवम्बर 2026
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="openBulkUpdateModal()" class="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-rose-950 font-black rounded-xl text-sm flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <i data-lucide="zap" class="w-4 h-4"></i>
+            <span>⚡ आज के भाव अपडेट करें (Daily Revision)</span>
+          </button>
+
+          <button onclick="openAddRateItemModal()" class="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>+ नया सामान जोड़ें</span>
+          </button>
+
+          <button onclick="syncRatesFromSuppliers()" title="सप्लायर बिलों से नए भाव लाएं" class="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-bold rounded-xl text-sm flex items-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="refresh-cw" class="w-4 h-4 text-indigo-700"></i>
+            <span>🔄 बिलों से सिंक</span>
+          </button>
+
+          <button onclick="shareRatesWhatsApp()" title="WhatsApp पर भाव सूची भेजें" class="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold rounded-xl text-sm flex items-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="message-circle" class="w-4 h-4 text-emerald-700"></i>
+            <span>WhatsApp भाव</span>
+          </button>
+
+          <button onclick="printCounterRateBoard()" title="दुकान काउंटर पर लगाने हेतु प्रिंट" class="px-3.5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl text-sm flex items-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>🖨️ रेट बोर्ड प्रिंट</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- RATE STATS CARDS -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border-2 border-gray-200">
+          <p class="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+            <i data-lucide="package" class="w-4 h-4 text-blue-600"></i>
+            कुल सामान (Total Items)
+          </p>
+          <p class="text-2xl md:text-3xl font-black text-gray-900 mt-1" id="rate-kpi-total">0</p>
+          <span class="text-[11px] text-gray-500 font-semibold">लिस्टेड किराना सामान</span>
+        </div>
+
+        <div class="bg-amber-50 p-4 rounded-2xl shadow-sm border-2 border-amber-300">
+          <p class="text-xs font-bold text-amber-900 uppercase flex items-center gap-1">
+            <i data-lucide="trending-up" class="w-4 h-4 text-amber-700"></i>
+            आज भाव बढ़े (Rate Up 🔺)
+          </p>
+          <p class="text-2xl md:text-3xl font-black text-amber-900 mt-1" id="rate-kpi-up">0</p>
+          <span class="text-[11px] text-amber-800 font-bold">कल से तेजी वाले सामान</span>
+        </div>
+
+        <div class="bg-blue-50 p-4 rounded-2xl shadow-sm border-2 border-blue-300">
+          <p class="text-xs font-bold text-blue-900 uppercase flex items-center gap-1">
+            <i data-lucide="trending-down" class="w-4 h-4 text-blue-700"></i>
+            आज भाव घटे (Rate Down 🔻)
+          </p>
+          <p class="text-2xl md:text-3xl font-black text-blue-900 mt-1" id="rate-kpi-down">0</p>
+          <span class="text-[11px] text-blue-800 font-bold">कल से मंदी वाले सामान</span>
+        </div>
+
+        <div class="bg-emerald-50 p-4 rounded-2xl shadow-sm border-2 border-emerald-300">
+          <p class="text-xs font-bold text-emerald-900 uppercase flex items-center gap-1">
+            <i data-lucide="badge-percent" class="w-4 h-4 text-emerald-700"></i>
+            औसत मुनाफा (Avg Margin)
+          </p>
+          <p class="text-2xl md:text-3xl font-black text-emerald-800 mt-1" id="rate-kpi-margin">0%</p>
+          <span class="text-[11px] text-emerald-700 font-bold">दुकान का ग्रॉस मार्जिन</span>
+        </div>
+      </div>
+
+      <!-- RATE SEARCH & CATEGORY FILTER BAR -->
+      <div class="no-print flex flex-wrap items-center justify-between gap-3">
+        <div class="relative flex-1 min-w-[280px]">
+          <i data-lucide="search" class="w-5 h-5 absolute left-3.5 top-3.5 text-gray-400"></i>
+          <input 
+            type="text" 
+            id="rate-search-input" 
+            oninput="renderRateListView()" 
+            placeholder="सामान, ब्रांड, HSN कोड या सप्लायर से खोजें..." 
+            class="w-full pl-11 pr-4 py-3 bg-white border-2 border-gray-300 rounded-xl text-base focus:border-amber-500 focus:outline-none shadow-sm font-medium"
+          >
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div class="flex items-center gap-1.5 flex-wrap" id="rate-category-pills">
+          <!-- Populated dynamically in JS -->
+        </div>
+      </div>
+
+      <!-- RATES TABLE CONTAINER (DESKTOP) -->
+      <div id="rate-desktop-table-container" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-amber-950 text-white text-sm font-extrabold uppercase tracking-wide">
+                <th class="py-3.5 px-4">सामान व ब्रांड (Commodity / Item)</th>
+                <th class="py-3.5 px-3">वर्ग (Category)</th>
+                <th class="py-3.5 px-3">पैकिंग / इकाई (Unit)</th>
+                <th class="py-3.5 px-3 text-right">खरीद भाव (Buy ₹)</th>
+                <th class="py-3.5 px-3 text-right">दुकान बिक्री भाव (Sell ₹)</th>
+                <th class="py-3.5 px-3 text-center">आज का ट्रेंड</th>
+                <th class="py-3.5 px-3 text-right">दुकान मुनाफा (Margin)</th>
+                <th class="py-3.5 px-3">सप्लायर / स्रोत</th>
+                <th class="py-3.5 px-3 text-center no-print">एक्शन</th>
+              </tr>
+            </thead>
+            <tbody id="rate-desktop-table-body" class="divide-y divide-gray-200 text-sm font-semibold">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RATES MOBILE CARDS CONTAINER -->
+      <div id="rate-mobile-cards-container" class="hidden space-y-3">
+        <!-- Dynamically populated mobile rate cards -->
+      </div>
+    </section>
 
   </main>
 
@@ -893,6 +1050,160 @@
     <!-- Image Display Canvas (Scrollable/Pan) -->
     <div class="flex-1 overflow-auto flex items-center justify-center p-2 relative" id="viewer-canvas">
       <img id="viewer-img" src="" alt="पर्ची फोटो" class="max-w-none transition-transform duration-200 select-none shadow-2xl rounded-lg" style="transform: scale(1) rotate(0deg); max-height: 85vh;">
+    </div>
+  </div>
+
+  <!-- ================================================= -->
+  <!-- MODAL 7: ADD / EDIT RATE ITEM (रेट लिस्ट में सामान) -->
+  <!-- ================================================= -->
+  <div id="modal-add-rate-item" class="no-print fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-xl font-black text-amber-950 flex items-center gap-2" id="modal-rate-item-title">
+          <i data-lucide="tag" class="w-6 h-6 text-amber-600"></i>
+          रेट लिस्ट में नया सामान जोड़ें
+        </h3>
+        <button onclick="closeAddRateItemModal()" class="text-gray-400 hover:text-gray-600 p-1">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <input type="hidden" id="rate-form-id">
+
+      <div class="space-y-3.5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-black text-gray-700 uppercase mb-1">सामान का नाम (Item Name) *</label>
+            <input type="text" id="rate-form-name" placeholder="उदा. Mustard Oil 15 Kg Tin" class="w-full px-3 py-2 border-2 border-gray-300 rounded-xl font-bold text-sm text-gray-900 focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="block text-xs font-black text-gray-700 uppercase mb-1">हिंदी नाम (Hindi Name)</label>
+            <input type="text" id="rate-form-hindi" placeholder="उदा. सरसों तेल 15 Kg टिन" class="w-full px-3 py-2 border-2 border-gray-300 rounded-xl font-bold text-sm text-gray-900 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-black text-gray-700 uppercase mb-1">वर्ग (Category)</label>
+            <select id="rate-form-category" class="w-full px-2.5 py-2 border-2 border-gray-300 rounded-xl font-bold text-xs bg-white focus:outline-none focus:border-amber-500">
+              <option value="खाद्य तेल व घी">🛢️ खाद्य तेल व घी</option>
+              <option value="अनाज व आटा">🌾 अनाज व आटा</option>
+              <option value="दालें व बेसन">🥣 दालें व बेसन</option>
+              <option value="चीनी, नमक व मसाले">🧂 चीनी, नमक व मसाले</option>
+              <option value="अन्य किराना">📦 अन्य किराना</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-black text-gray-700 uppercase mb-1">पैकिंग / इकाई (Unit) *</label>
+            <input type="text" id="rate-form-unit" placeholder="15 Kg TIN / 50 Kg बोरी" class="w-full px-3 py-2 border-2 border-gray-300 rounded-xl font-bold text-xs text-gray-900 focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="block text-xs font-black text-gray-700 uppercase mb-1">HSN कोड</label>
+            <input type="text" id="rate-form-hsn" placeholder="उदा. 15149120" class="w-full px-3 py-2 border-2 border-gray-300 rounded-xl font-mono text-xs text-gray-800 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <!-- Buy & Sell Rate Row -->
+        <div class="grid grid-cols-2 gap-3 p-3 bg-amber-50/60 border border-amber-200 rounded-2xl">
+          <div>
+            <label class="block text-xs font-black text-gray-800 uppercase mb-1">खरीद भाव (Buy Rate ₹) *</label>
+            <div class="relative">
+              <span class="absolute left-2.5 top-1.5 text-gray-500 font-bold text-sm">₹</span>
+              <input type="number" step="any" id="rate-form-buy" placeholder="0" oninput="calcFormMargin()" class="w-full pl-7 pr-2 py-1.5 bg-white border-2 border-gray-300 rounded-xl font-black text-base text-gray-900 focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-black text-emerald-900 uppercase mb-1">दुकान बिक्री भाव (Sell Rate ₹) *</label>
+            <div class="relative">
+              <span class="absolute left-2.5 top-1.5 text-emerald-700 font-bold text-sm">₹</span>
+              <input type="number" step="any" id="rate-form-sell" placeholder="0" oninput="calcFormMargin()" class="w-full pl-7 pr-2 py-1.5 bg-white border-2 border-emerald-400 rounded-xl font-black text-base text-emerald-950 focus:outline-none focus:border-emerald-600">
+            </div>
+          </div>
+        </div>
+
+        <!-- Profit margin preview badge -->
+        <div class="p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between text-xs font-bold text-emerald-900">
+          <span>अनुमानित मुनाफा (Estimated Profit):</span>
+          <span class="text-sm font-black text-emerald-800" id="rate-form-margin-display">₹ 0 (0%)</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-black text-gray-700 uppercase mb-1">सप्लायर / स्रोत</label>
+            <input type="text" id="rate-form-supplier" placeholder="उदा. एस ई ट्रेडिंग या खुला मंडी" class="w-full px-3 py-2 border border-gray-300 rounded-xl font-bold text-xs text-gray-800 focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="block text-xs font-black text-gray-700 uppercase mb-1">नोट / टिप्पणी (Market Note)</label>
+            <input type="text" id="rate-form-notes" placeholder="उदा. आज ₹40 तेजी / 5% GST सहित" class="w-full px-3 py-2 border border-gray-300 rounded-xl font-medium text-xs text-gray-700 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t">
+        <button onclick="closeAddRateItemModal()" class="px-4 py-2 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition">
+          रद्द करें
+        </button>
+        <button onclick="saveRateItem()" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-rose-950 font-black rounded-xl shadow-md transition flex items-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>✓ रेट सेव करें (Save Rate)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================= -->
+  <!-- MODAL 8: BULK DAILY PRICE REVISION (भाव अपडेट शीट) -->
+  <!-- ================================================= -->
+  <div id="modal-bulk-update-rates" class="no-print fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-4xl w-full p-5 md:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between border-b pb-3 shrink-0">
+        <div>
+          <h3 class="text-xl md:text-2xl font-black text-amber-950 flex items-center gap-2">
+            <i data-lucide="zap" class="w-6 h-6 text-amber-500"></i>
+            आज के दैनिक भाव अपडेट करें (Daily Quick Revision)
+          </h3>
+          <p class="text-xs text-gray-600 font-bold mt-0.5">
+            सुबह मंडी के नए भाव डालें — पुराना भाव अपने-आप सुरक्षित रहेगा और तेजी/मंदी का अंतर दिखेगा
+          </p>
+        </div>
+        <button onclick="closeBulkUpdateModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <!-- Quick update table -->
+      <div class="flex-1 overflow-y-auto pr-1">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead class="sticky top-0 bg-amber-50 z-10 border-b border-amber-200">
+            <tr class="text-xs uppercase font-black text-amber-950">
+              <th class="py-2.5 px-3">सामान व इकाई (Item)</th>
+              <th class="py-2.5 px-3 text-right">कल खरीद</th>
+              <th class="py-2.5 px-3 text-right">आज खरीद भाव (New Buy ₹)</th>
+              <th class="py-2.5 px-3 text-right">कल बिक्री</th>
+              <th class="py-2.5 px-3 text-right">आज बिक्री भाव (New Sell ₹)</th>
+              <th class="py-2.5 px-3 text-right">मुनाफा (Margin)</th>
+            </tr>
+          </thead>
+          <tbody id="bulk-update-table-body" class="divide-y divide-gray-100 font-semibold">
+            <!-- Dynamically populated rows in JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t shrink-0">
+        <span class="text-xs text-gray-500 font-bold">
+          💡 केवल बदले हुए भाव बदलें, बाकी अपने-आप वही रहेंगे
+        </span>
+        <div class="flex items-center gap-2">
+          <button onclick="closeBulkUpdateModal()" class="px-5 py-2.5 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition">
+            रद्द करें
+          </button>
+          <button onclick="saveBulkUpdatedRates()" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-rose-950 font-black rounded-xl shadow-md flex items-center gap-2 transition">
+            <i data-lucide="check-check" class="w-5 h-5"></i>
+            <span>✓ आज के सारे भाव लागू करें (Update All)</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

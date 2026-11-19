@@ -65,6 +65,42 @@ function saveLocalSuppliers(data) {
 
 let localMemorySuppliers = loadLocalSuppliers();
 
+// ==========================================
+// DAILY RATE LIST PERSISTENCE
+// ==========================================
+const RATE_FILE = path.join(__dirname, 'data', 'rate_list.json');
+
+function loadLocalRates() {
+  if (fs.existsSync(RATE_FILE)) {
+    try {
+      const content = fs.readFileSync(RATE_FILE, 'utf8');
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(r => ({
+          ...r,
+          buyRate: parseFloat(r.buyRate) || 0,
+          prevBuyRate: parseFloat(r.prevBuyRate) !== undefined ? parseFloat(r.prevBuyRate) : parseFloat(r.buyRate) || 0,
+          sellRate: parseFloat(r.sellRate) || 0,
+          prevSellRate: parseFloat(r.prevSellRate) !== undefined ? parseFloat(r.prevSellRate) : parseFloat(r.sellRate) || 0
+        }));
+      }
+    } catch (e) {
+      console.error('Error reading rate_list.json:', e);
+    }
+  }
+  return [];
+}
+
+function saveLocalRates(data) {
+  try {
+    fs.writeFileSync(RATE_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Error saving rate_list.json:', e);
+  }
+}
+
+let localMemoryRates = loadLocalRates();
+
 // Initialize Database on Startup
 initDatabase();
 
@@ -530,6 +566,274 @@ app.post('/api/upload-receipt', async (req, res) => {
     console.error('Error in /api/upload-receipt:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ==========================================
+// 10. DAILY COMMODITY & ITEM RATE LIST APIS
+// ==========================================
+
+// GET ALL DAILY RATES
+app.get('/api/rates', async (req, res) => {
+  if (pool) {
+    try {
+      const result = await pool.query('SELECT * FROM daily_rate_list ORDER BY category ASC, name ASC');
+      if (result.rows && result.rows.length > 0) {
+        const rates = result.rows.map(r => ({
+          id: r.id,
+          name: r.name,
+          hindiName: r.hindi_name || '',
+          category: r.category || 'अन्य किराना',
+          unit: r.unit || '1',
+          buyRate: parseFloat(r.buy_rate) || 0,
+          prevBuyRate: parseFloat(r.prev_buy_rate) || parseFloat(r.buy_rate) || 0,
+          sellRate: parseFloat(r.sell_rate) || 0,
+          prevSellRate: parseFloat(r.prev_sell_rate) || parseFloat(r.sell_rate) || 0,
+          supplierName: r.supplier_name || '',
+          hsnCode: r.hsn_code || '',
+          lastUpdated: r.last_updated || '',
+          notes: r.notes || ''
+        }));
+        return res.json({ success: true, source: 'postgresql', data: rates });
+      }
+    } catch (err) {
+      console.error('Error fetching rates from DB:', err.message);
+    }
+  }
+
+  // Memory / disk fallback
+  res.json({ success: true, source: 'local_disk', data: localMemoryRates });
+});
+
+// CREATE / UPDATE SINGLE RATE ITEM
+app.post('/api/rates', async (req, res) => {
+  try {
+    const { 
+      id, 
+      name, 
+      hindiName, 
+      category, 
+      unit, 
+      buyRate, 
+      prevBuyRate, 
+      sellRate, 
+      prevSellRate, 
+      supplierName, 
+      hsnCode, 
+      lastUpdated, 
+      notes 
+    } = req.body;
+
+    const rateId = id || `rate_${Date.now()}`;
+    const todayStr = lastUpdated || new Date().toISOString().split('T')[0];
+    const buyVal = parseFloat(buyRate) || 0;
+    const sellVal = parseFloat(sellRate) || 0;
+
+    let pBuy = prevBuyRate !== undefined ? parseFloat(prevBuyRate) : buyVal;
+    let pSell = prevSellRate !== undefined ? parseFloat(prevSellRate) : sellVal;
+
+    // Check existing in memory to track previous day's price shift
+    const existingIdx = localMemoryRates.findIndex(r => r.id === rateId);
+    if (existingIdx >= 0) {
+      const old = localMemoryRates[existingIdx];
+      if (buyVal !== old.buyRate) {
+        pBuy = old.buyRate;
+      }
+      if (sellVal !== old.sellRate) {
+        pSell = old.sellRate;
+      }
+      localMemoryRates[existingIdx] = {
+        ...old,
+        name: name || old.name,
+        hindiName: hindiName !== undefined ? hindiName : old.hindiName,
+        category: category || old.category,
+        unit: unit || old.unit,
+        buyRate: buyVal,
+        prevBuyRate: pBuy,
+        sellRate: sellVal,
+        prevSellRate: pSell,
+        supplierName: supplierName !== undefined ? supplierName : old.supplierName,
+        hsnCode: hsnCode !== undefined ? hsnCode : old.hsnCode,
+        lastUpdated: todayStr,
+        notes: notes !== undefined ? notes : old.notes
+      };
+    } else {
+      localMemoryRates.push({
+        id: rateId,
+        name,
+        hindiName: hindiName || '',
+        category: category || 'अन्य किराना',
+        unit: unit || '1',
+        buyRate: buyVal,
+        prevBuyRate: pBuy,
+        sellRate: sellVal,
+        prevSellRate: pSell,
+        supplierName: supplierName || '',
+        hsnCode: hsnCode || '',
+        lastUpdated: todayStr,
+        notes: notes || ''
+      });
+    }
+
+    saveLocalRates(localMemoryRates);
+
+    if (pool) {
+      try {
+        await pool.query(
+          `INSERT INTO daily_rate_list 
+           (id, name, hindi_name, category, unit, buy_rate, prev_buy_rate, sell_rate, prev_sell_rate, supplier_name, hsn_code, last_updated, notes) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             hindi_name = EXCLUDED.hindi_name,
+             category = EXCLUDED.category,
+             unit = EXCLUDED.unit,
+             buy_rate = EXCLUDED.buy_rate,
+             prev_buy_rate = EXCLUDED.prev_buy_rate,
+             sell_rate = EXCLUDED.sell_rate,
+             prev_sell_rate = EXCLUDED.prev_sell_rate,
+             supplier_name = EXCLUDED.supplier_name,
+             hsn_code = EXCLUDED.hsn_code,
+             last_updated = EXCLUDED.last_updated,
+             notes = EXCLUDED.notes`,
+          [rateId, name, hindiName || '', category || 'अन्य किराना', unit || '1', buyVal, pBuy, sellVal, pSell, supplierName || '', hsnCode || '', todayStr, notes || '']
+        );
+      } catch (dbErr) {
+        console.error('Error saving rate to DB:', dbErr.message);
+      }
+    }
+
+    res.json({ success: true, id: rateId, data: localMemoryRates });
+  } catch (err) {
+    console.error('Error in POST /api/rates:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// BULK UPDATE DAILY RATES (Quick Daily Morning Revision)
+app.post('/api/rates/bulk', async (req, res) => {
+  try {
+    const { rates } = req.body;
+    if (!Array.isArray(rates) || rates.length === 0) {
+      return res.status(400).json({ error: 'No rates array provided' });
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    rates.forEach(item => {
+      const idx = localMemoryRates.findIndex(r => r.id === item.id);
+      const buyVal = parseFloat(item.buyRate) || 0;
+      const sellVal = parseFloat(item.sellRate) || 0;
+
+      if (idx >= 0) {
+        const old = localMemoryRates[idx];
+        const pBuy = (buyVal !== old.buyRate) ? old.buyRate : (old.prevBuyRate || old.buyRate);
+        const pSell = (sellVal !== old.sellRate) ? old.sellRate : (old.prevSellRate || old.sellRate);
+
+        localMemoryRates[idx] = {
+          ...old,
+          buyRate: buyVal,
+          prevBuyRate: pBuy,
+          sellRate: sellVal,
+          prevSellRate: pSell,
+          notes: item.notes !== undefined ? item.notes : old.notes,
+          lastUpdated: todayStr
+        };
+
+        if (pool) {
+          pool.query(
+            `UPDATE daily_rate_list 
+             SET buy_rate = $1, prev_buy_rate = $2, sell_rate = $3, prev_sell_rate = $4, notes = $5, last_updated = $6 
+             WHERE id = $7`,
+            [buyVal, pBuy, sellVal, pSell, item.notes || old.notes || '', todayStr, item.id]
+          ).catch(e => console.error('Bulk update DB error:', e.message));
+        }
+      }
+    });
+
+    saveLocalRates(localMemoryRates);
+    res.json({ success: true, count: rates.length, data: localMemoryRates });
+  } catch (err) {
+    console.error('Error in /api/rates/bulk:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// AUTO-SYNC LATEST BUY RATES FROM SUPPLIER BILLS
+app.post('/api/rates/sync-suppliers', async (req, res) => {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    let syncedCount = 0;
+
+    localMemorySuppliers.forEach(sup => {
+      (sup.items || []).forEach(itm => {
+        const effectiveRate = parseFloat(itm.rateWithGst) || parseFloat(itm.rateWoGst) || 0;
+        if (effectiveRate <= 0) return;
+
+        // Try to match existing rate item
+        const itmDesc = String(itm.description || '').toLowerCase().trim();
+        const existing = localMemoryRates.find(r => {
+          const rName = String(r.name || '').toLowerCase();
+          const rHindi = String(r.hindiName || '').toLowerCase();
+          return rName.includes(itmDesc) || itmDesc.includes(rName) || (rHindi && (rHindi.includes(itmDesc) || itmDesc.includes(rHindi)));
+        });
+
+        if (existing) {
+          if (existing.buyRate !== effectiveRate) {
+            existing.prevBuyRate = existing.buyRate;
+            existing.buyRate = effectiveRate;
+            existing.lastUpdated = todayStr;
+            existing.supplierName = sup.name;
+            if (existing.sellRate < effectiveRate) {
+              existing.sellRate = Math.round(effectiveRate * 1.06); // 6% default margin if lower
+            }
+            syncedCount++;
+          }
+        } else {
+          // Add new item into rate list
+          const newRate = {
+            id: `rate_sync_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+            name: itm.description,
+            hindiName: itm.description,
+            category: 'अन्य किराना',
+            unit: itm.quantity || '1',
+            buyRate: effectiveRate,
+            prevBuyRate: effectiveRate,
+            sellRate: Math.round(effectiveRate * 1.06),
+            prevSellRate: Math.round(effectiveRate * 1.06),
+            supplierName: sup.name,
+            hsnCode: itm.hsnCode || '',
+            lastUpdated: todayStr,
+            notes: `सप्लायर बिल से जोड़ा गया (${sup.name})`
+          };
+          localMemoryRates.push(newRate);
+          syncedCount++;
+        }
+      });
+    });
+
+    saveLocalRates(localMemoryRates);
+    res.json({ success: true, syncedCount, data: localMemoryRates });
+  } catch (err) {
+    console.error('Error syncing rates from suppliers:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE RATE ITEM
+app.delete('/api/rates/:id', async (req, res) => {
+  const rateId = req.params.id;
+  localMemoryRates = localMemoryRates.filter(r => r.id !== rateId);
+  saveLocalRates(localMemoryRates);
+
+  if (pool) {
+    try {
+      await pool.query('DELETE FROM daily_rate_list WHERE id = $1', [rateId]);
+    } catch (e) {
+      console.error('DB delete rate error:', e.message);
+    }
+  }
+
+  res.json({ success: true, id: rateId });
 });
 
 // Serve frontend for all other routes

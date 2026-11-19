@@ -312,6 +312,24 @@ async function initDatabase() {
       ALTER TABLE weekly_history ADD COLUMN IF NOT EXISTS payment_date VARCHAR(50) DEFAULT '';
       ALTER TABLE weekly_history ADD COLUMN IF NOT EXISTS freight NUMERIC(12, 2) DEFAULT 0;
       ALTER TABLE weekly_history ADD COLUMN IF NOT EXISTS receipt_image TEXT DEFAULT '';
+
+      -- 4. Create Daily Rate List Table
+      CREATE TABLE IF NOT EXISTS daily_rate_list (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        hindi_name VARCHAR(255) DEFAULT '',
+        category VARCHAR(100) DEFAULT 'अन्य किराना',
+        unit VARCHAR(50) DEFAULT '1',
+        buy_rate NUMERIC(12, 2) DEFAULT 0,
+        prev_buy_rate NUMERIC(12, 2) DEFAULT 0,
+        sell_rate NUMERIC(12, 2) DEFAULT 0,
+        prev_sell_rate NUMERIC(12, 2) DEFAULT 0,
+        supplier_name VARCHAR(255) DEFAULT '',
+        hsn_code VARCHAR(50) DEFAULT '',
+        last_updated VARCHAR(50) DEFAULT '',
+        notes TEXT DEFAULT '',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
     `);
 
     // Check if suppliers exist, if not seed default ones
@@ -340,7 +358,32 @@ async function initDatabase() {
           );
         }
       }
-      console.log('✅ Seeding completed.');
+      console.log('✅ Seeding suppliers completed.');
+    }
+
+    // Check if daily rate list exists, if not seed default rates
+    const rateRes = await client.query('SELECT COUNT(*) FROM daily_rate_list');
+    if (parseInt(rateRes.rows[0].count) === 0) {
+      console.log('🌱 Seeding initial daily rate list into PostgreSQL...');
+      const fs = require('fs');
+      const path = require('path');
+      const rateFile = path.join(__dirname, 'data', 'rate_list.json');
+      if (fs.existsSync(rateFile)) {
+        try {
+          const rates = JSON.parse(fs.readFileSync(rateFile, 'utf8'));
+          for (const r of rates) {
+            await client.query(
+              `INSERT INTO daily_rate_list 
+               (id, name, hindi_name, category, unit, buy_rate, prev_buy_rate, sell_rate, prev_sell_rate, supplier_name, hsn_code, last_updated, notes) 
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+              [r.id, r.name, r.hindiName || '', r.category || 'अन्य किराना', r.unit || '1', r.buyRate || 0, r.prevBuyRate || r.buyRate || 0, r.sellRate || 0, r.prevSellRate || r.sellRate || 0, r.supplierName || '', r.hsnCode || '', r.lastUpdated || '', r.notes || '']
+            );
+          }
+          console.log('✅ Rate list seeding completed.');
+        } catch (e) {
+          console.error('Error seeding rate list:', e.message);
+        }
+      }
     }
 
     client.release();

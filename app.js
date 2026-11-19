@@ -384,6 +384,7 @@ const DICTIONARY = {
 // 2. APPLICATION STATE
 let state = {
   currentLang: 'hi',
+  mainTab: 'ledger',   // 'ledger' or 'rates'
   viewMode: 'desktop', // 'desktop' or 'mobile'
   filter: 'ALL',       // 'ALL', 'DUE', 'PAID'
   searchQuery: '',
@@ -404,6 +405,10 @@ let state = {
     billNo: '',
     billDate: ''
   },
+  rateSearchQuery: '',
+  rateCategoryFilter: 'ALL',
+  rates: [],
+  bulkRatesDraft: [],
   suppliers: []
 };
 
@@ -414,6 +419,7 @@ function escapeQuotes(str) {
 // INITIALIZATION
 window.addEventListener('DOMContentLoaded', () => {
   loadData();
+  loadRatesData();
   renderView();
   initQuickItemChips();
   lucide.createIcons();
@@ -598,6 +604,19 @@ function setViewMode(mode) {
     desktopContainer.classList.add('hidden');
     mobileContainer.classList.remove('hidden');
   }
+
+  const rateDesktop = document.getElementById('rate-desktop-table-container');
+  const rateMobile = document.getElementById('rate-mobile-cards-container');
+  if (rateDesktop && rateMobile) {
+    if (mode === 'desktop') {
+      rateDesktop.classList.remove('hidden');
+      rateMobile.classList.add('hidden');
+    } else {
+      rateDesktop.classList.add('hidden');
+      rateMobile.classList.remove('hidden');
+    }
+  }
+
   lucide.createIcons();
 }
 
@@ -2988,4 +3007,744 @@ function printReceiptImage() {
     </html>
   `);
   printWin.document.close();
+}
+
+// =========================================================
+// 9. DAILY COMMODITY & ITEM RATE LIST (दैनिक भाव सूची)
+// =========================================================
+
+// Switch Main Navigation Tab: 'ledger' vs 'rates'
+function switchMainTab(tab) {
+  state.mainTab = tab;
+  const ledgerTabBtn = document.getElementById('nav-tab-ledger');
+  const ratesTabBtn = document.getElementById('nav-tab-rates');
+  const ledgerSection = document.getElementById('section-supplier-ledger');
+  const rateSection = document.getElementById('section-daily-rate-list');
+
+  if (tab === 'ledger') {
+    ledgerTabBtn.className = "px-3.5 py-1.5 rounded-lg text-sm font-black flex items-center gap-1.5 bg-amber-400 text-rose-950 shadow-sm transition";
+    ratesTabBtn.className = "px-3.5 py-1.5 rounded-lg text-sm font-black flex items-center gap-1.5 text-amber-200 hover:text-white transition";
+    ledgerSection.classList.remove('hidden');
+    rateSection.classList.add('hidden');
+    renderView();
+  } else {
+    ratesTabBtn.className = "px-3.5 py-1.5 rounded-lg text-sm font-black flex items-center gap-1.5 bg-amber-400 text-rose-950 shadow-sm transition";
+    ledgerTabBtn.className = "px-3.5 py-1.5 rounded-lg text-sm font-black flex items-center gap-1.5 text-amber-200 hover:text-white transition";
+    ledgerSection.classList.add('hidden');
+    rateSection.classList.remove('hidden');
+    renderRateListView();
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+// Load daily rate list from server / localStorage
+async function loadRatesData() {
+  let loadedRates = [];
+
+  try {
+    const res = await fetch('/api/rates');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        loadedRates = json.data;
+      }
+    }
+  } catch (err) {
+    console.log('Error fetching rates from server:', err);
+  }
+
+  if (loadedRates.length === 0) {
+    const saved = localStorage.getItem('kiryana_daily_rates_v1');
+    if (saved) {
+      try {
+        loadedRates = JSON.parse(saved);
+      } catch (e) {}
+    }
+  }
+
+  state.rates = loadedRates;
+  persistRatesData();
+  if (state.mainTab === 'rates') {
+    renderRateListView();
+  }
+}
+
+function persistRatesData() {
+  localStorage.setItem('kiryana_daily_rates_v1', JSON.stringify(state.rates));
+}
+
+// Render Daily Rate List
+function renderRateListView() {
+  const tbody = document.getElementById('rate-desktop-table-body');
+  const mobileContainer = document.getElementById('rate-mobile-cards-container');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  if (mobileContainer) mobileContainer.innerHTML = '';
+
+  // Today's Date formatted
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('hi-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const dateEl = document.getElementById('rate-date-display');
+  if (dateEl) dateEl.textContent = `📅 आज का भाव: ${dateStr}`;
+
+  // KPI Calculations
+  let countUp = 0;
+  let countDown = 0;
+  let totalMarginPct = 0;
+  let validMarginCount = 0;
+
+  state.rates.forEach(r => {
+    const b = Number(r.buyRate) || 0;
+    const pb = Number(r.prevBuyRate) || b;
+    const s = Number(r.sellRate) || 0;
+
+    if (b > pb) countUp++;
+    else if (b < pb) countDown++;
+
+    if (b > 0 && s >= b) {
+      totalMarginPct += ((s - b) / b) * 100;
+      validMarginCount++;
+    }
+  });
+
+  const avgMargin = validMarginCount > 0 ? (totalMarginPct / validMarginCount).toFixed(1) : '0';
+  document.getElementById('rate-kpi-total').textContent = state.rates.length;
+  document.getElementById('rate-kpi-up').textContent = `${countUp} सामान`;
+  document.getElementById('rate-kpi-down').textContent = `${countDown} सामान`;
+  document.getElementById('rate-kpi-margin').textContent = `${avgMargin}%`;
+
+  // Render Category Filter Pills
+  const catPillsContainer = document.getElementById('rate-category-pills');
+  const categories = ['ALL', 'खाद्य तेल व घी', 'अनाज व आटा', 'दालें व बेसन', 'चीनी, नमक व मसाले', 'अन्य किराना'];
+  if (catPillsContainer) {
+    catPillsContainer.innerHTML = categories.map(cat => {
+      const isSelected = state.rateCategoryFilter === cat;
+      const label = cat === 'ALL' ? 'सभी भाव (All)' : cat;
+      return `
+        <button onclick="setRateCategoryFilter('${cat}')" class="px-3.5 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${isSelected ? 'bg-amber-500 text-rose-950 shadow-sm' : 'bg-white hover:bg-amber-50 text-gray-700 border border-gray-300'}">
+          ${label}
+        </button>
+      `;
+    }).join('');
+  }
+
+  // Filter Items
+  const query = (document.getElementById('rate-search-input')?.value || '').toLowerCase().trim();
+  const filteredRates = state.rates.filter(r => {
+    const matchesCat = state.rateCategoryFilter === 'ALL' || r.category === state.rateCategoryFilter;
+    const matchesQuery = !query || 
+      String(r.name || '').toLowerCase().includes(query) || 
+      String(r.hindiName || '').toLowerCase().includes(query) || 
+      String(r.hsnCode || '').toLowerCase().includes(query) || 
+      String(r.supplierName || '').toLowerCase().includes(query) ||
+      String(r.category || '').toLowerCase().includes(query);
+    return matchesCat && matchesQuery;
+  });
+
+  if (filteredRates.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" class="py-12 text-center text-gray-400 font-bold text-base">
+          कोई सामान या भाव नहीं मिला (No rate items found)
+        </td>
+      </tr>
+    `;
+    if (mobileContainer) {
+      mobileContainer.innerHTML = `
+        <div class="p-8 text-center text-gray-400 font-bold bg-white rounded-2xl border">
+          कोई सामान या भाव नहीं मिला
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // Render Desktop Rows
+  filteredRates.forEach((r, idx) => {
+    const buy = Number(r.buyRate) || 0;
+    const prevBuy = Number(r.prevBuyRate) || buy;
+    const sell = Number(r.sellRate) || 0;
+    const prevSell = Number(r.prevSellRate) || sell;
+
+    const marginRs = Math.max(0, sell - buy);
+    const marginPct = buy > 0 ? (((sell - buy) / buy) * 100).toFixed(1) : 0;
+
+    // Shift Badge
+    let shiftBadge = '';
+    const diffBuy = buy - prevBuy;
+    if (diffBuy > 0) {
+      shiftBadge = `<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-950 border border-amber-300 font-black text-xs inline-flex items-center gap-1 shadow-2xs">+₹${diffBuy} 🔺 तेजी</span>`;
+    } else if (diffBuy < 0) {
+      shiftBadge = `<span class="px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-300 font-black text-xs inline-flex items-center gap-1 shadow-2xs">-₹${Math.abs(diffBuy)} 🔻 मंदी</span>`;
+    } else {
+      shiftBadge = `<span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-bold text-xs inline-flex items-center gap-1">स्थिर ⚪</span>`;
+    }
+
+    const tr = document.createElement('tr');
+    tr.className = "hover:bg-amber-50/40 transition";
+    tr.innerHTML = `
+      <td class="py-3.5 px-4">
+        <div class="font-black text-gray-950 text-base flex items-center gap-2">
+          <span>${r.hindiName || r.name}</span>
+          ${r.hsnCode ? `<span class="text-[10px] text-gray-400 font-mono">HSN: ${r.hsnCode}</span>` : ''}
+        </div>
+        <div class="text-xs text-gray-500 font-semibold mt-0.5">
+          ${r.name !== r.hindiName ? r.name : ''}
+        </div>
+        ${r.notes ? `<div class="text-[11px] text-amber-900 font-bold bg-amber-50/80 px-2 py-0.5 rounded border border-amber-200/60 inline-block mt-1">📌 ${r.notes}</div>` : ''}
+      </td>
+      <td class="py-3.5 px-3">
+        <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 font-bold text-xs border border-amber-200">
+          ${r.category || 'सामान्य'}
+        </span>
+      </td>
+      <td class="py-3.5 px-3">
+        <span class="px-2.5 py-1 rounded-lg bg-gray-100 font-black text-xs text-gray-800 border border-gray-200">
+          ${r.unit || '1'}
+        </span>
+      </td>
+      <td class="py-3.5 px-3 text-right">
+        <div class="flex items-center justify-end gap-1">
+          <span class="text-gray-400 text-sm font-bold">₹</span>
+          <input 
+            type="number" 
+            step="any" 
+            value="${buy}" 
+            onchange="updateRateItemDirect('${r.id}', 'buyRate', this.value)" 
+            title="क्लिक करके आज का नया खरीद भाव लिखें"
+            class="w-24 px-2 py-1 bg-amber-50/50 hover:bg-white focus:bg-white border-2 border-amber-300 rounded-lg font-black text-amber-950 text-right focus:outline-none focus:border-amber-600 text-base shadow-2xs"
+          >
+        </div>
+        <div class="text-[10px] text-gray-400 font-medium text-right mt-0.5">कल: ₹${prevBuy}</div>
+      </td>
+      <td class="py-3.5 px-3 text-right">
+        <div class="flex items-center justify-end gap-1">
+          <span class="text-emerald-600 text-sm font-black">₹</span>
+          <input 
+            type="number" 
+            step="any" 
+            value="${sell}" 
+            onchange="updateRateItemDirect('${r.id}', 'sellRate', this.value)" 
+            title="क्लिक करके दुकान का बिक्री भाव बदलें"
+            class="w-24 px-2 py-1 bg-emerald-50/50 hover:bg-white focus:bg-white border-2 border-emerald-400 rounded-lg font-black text-emerald-950 text-right focus:outline-none focus:border-emerald-600 text-base shadow-2xs"
+          >
+        </div>
+        <div class="text-[10px] text-gray-400 font-medium text-right mt-0.5">कल: ₹${prevSell}</div>
+      </td>
+      <td class="py-3.5 px-3 text-center">
+        ${shiftBadge}
+      </td>
+      <td class="py-3.5 px-3 text-right">
+        <div class="text-sm font-black text-emerald-800">₹ ${marginRs.toLocaleString('en-IN')}</div>
+        <div class="text-[11px] font-bold text-emerald-600">(${marginPct}%)</div>
+      </td>
+      <td class="py-3.5 px-3">
+        <div class="text-xs font-bold text-gray-800 truncate max-w-[150px]">${r.supplierName || 'खुला भाव'}</div>
+        <div class="text-[10px] text-gray-400 font-medium mt-0.5">📅 ${r.lastUpdated || 'आज'}</div>
+      </td>
+      <td class="py-3.5 px-3 text-center no-print">
+        <div class="flex items-center justify-center gap-1.5">
+          <button onclick="openAddRateItemModal('${r.id}')" title="बदलें / संपादित करें" class="p-1.5 text-gray-600 hover:text-amber-700 hover:bg-amber-100 rounded-lg transition">
+            <i data-lucide="edit-3" class="w-4 h-4"></i>
+          </button>
+          <button onclick="deleteRateItem('${r.id}')" title="हटाएं" class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+
+    // Mobile Card
+    if (mobileContainer) {
+      const mCard = document.createElement('div');
+      mCard.className = "bg-white p-4 rounded-2xl border-2 border-gray-200 shadow-sm space-y-3";
+      mCard.innerHTML = `
+        <div class="flex items-start justify-between gap-2 border-b pb-2">
+          <div>
+            <h4 class="font-black text-gray-950 text-base leading-tight">${r.hindiName || r.name}</h4>
+            <div class="flex items-center gap-1.5 mt-1 text-xs">
+              <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded font-bold">${r.category}</span>
+              <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded font-bold">${r.unit}</span>
+            </div>
+          </div>
+          <div>${shiftBadge}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 bg-amber-50/50 p-2.5 rounded-xl border border-amber-200">
+          <div>
+            <span class="text-[10px] font-bold text-gray-500 uppercase block">खरीद भाव (Buy ₹):</span>
+            <input 
+              type="number" 
+              value="${buy}" 
+              onchange="updateRateItemDirect('${r.id}', 'buyRate', this.value)" 
+              class="w-full px-2 py-1 bg-white border border-amber-400 rounded-lg font-black text-amber-950 text-sm mt-0.5"
+            >
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-emerald-800 uppercase block">बिक्री भाव (Sell ₹):</span>
+            <input 
+              type="number" 
+              value="${sell}" 
+              onchange="updateRateItemDirect('${r.id}', 'sellRate', this.value)" 
+              class="w-full px-2 py-1 bg-white border border-emerald-400 rounded-lg font-black text-emerald-950 text-sm mt-0.5"
+            >
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs font-bold pt-1">
+          <span class="text-emerald-800">मुनाफा: <strong>₹${marginRs} (${marginPct}%)</strong></span>
+          <div class="flex items-center gap-2">
+            <button onclick="openAddRateItemModal('${r.id}')" class="text-amber-800 font-bold text-xs hover:underline">संपादित करें</button>
+            <button onclick="deleteRateItem('${r.id}')" class="text-rose-600 font-bold text-xs hover:underline">हटाएं</button>
+          </div>
+        </div>
+      `;
+      mobileContainer.appendChild(mCard);
+    }
+  });
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function setRateCategoryFilter(cat) {
+  state.rateCategoryFilter = cat;
+  renderRateListView();
+}
+
+// Rapid Inline Edit on Table
+function updateRateItemDirect(id, field, value) {
+  const r = state.rates.find(item => item.id === id);
+  if (!r) return;
+
+  const num = parseFloat(value) || 0;
+  if (field === 'buyRate') {
+    if (num !== r.buyRate) {
+      r.prevBuyRate = r.buyRate;
+      r.buyRate = num;
+    }
+  } else if (field === 'sellRate') {
+    if (num !== r.sellRate) {
+      r.prevSellRate = r.sellRate;
+      r.sellRate = num;
+    }
+  }
+
+  r.lastUpdated = new Date().toISOString().split('T')[0];
+  persistRatesData();
+  renderRateListView();
+  showToast(state.currentLang === 'hi' ? `${r.hindiName || r.name} का भाव अपडेट हुआ! ⚡` : `Price updated! ⚡`);
+
+  // Sync to server
+  fetch('/api/rates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(r)
+  }).catch(() => {});
+}
+
+// Open Add / Edit Rate Item Modal
+function openAddRateItemModal(editId = null) {
+  const modal = document.getElementById('modal-add-rate-item');
+  const title = document.getElementById('modal-rate-item-title');
+  if (!modal) return;
+
+  if (editId) {
+    const r = state.rates.find(item => item.id === editId);
+    if (!r) return;
+    title.innerHTML = `<i data-lucide="edit" class="w-6 h-6 text-amber-600"></i> सामान का भाव बदलें`;
+    document.getElementById('rate-form-id').value = r.id;
+    document.getElementById('rate-form-name').value = r.name || '';
+    document.getElementById('rate-form-hindi').value = r.hindiName || '';
+    document.getElementById('rate-form-category').value = r.category || 'अन्य किराना';
+    document.getElementById('rate-form-unit').value = r.unit || '1';
+    document.getElementById('rate-form-hsn').value = r.hsnCode || '';
+    document.getElementById('rate-form-buy').value = r.buyRate || '';
+    document.getElementById('rate-form-sell').value = r.sellRate || '';
+    document.getElementById('rate-form-supplier').value = r.supplierName || '';
+    document.getElementById('rate-form-notes').value = r.notes || '';
+  } else {
+    title.innerHTML = `<i data-lucide="tag" class="w-6 h-6 text-amber-600"></i> रेट लिस्ट में नया सामान जोड़ें`;
+    document.getElementById('rate-form-id').value = '';
+    document.getElementById('rate-form-name').value = '';
+    document.getElementById('rate-form-hindi').value = '';
+    document.getElementById('rate-form-category').value = 'खाद्य तेल व घी';
+    document.getElementById('rate-form-unit').value = '15 Kg TIN';
+    document.getElementById('rate-form-hsn').value = '';
+    document.getElementById('rate-form-buy').value = '';
+    document.getElementById('rate-form-sell').value = '';
+    document.getElementById('rate-form-supplier').value = 'खुला मंडी भाव';
+    document.getElementById('rate-form-notes').value = '';
+  }
+
+  calcFormMargin();
+  modal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeAddRateItemModal() {
+  const modal = document.getElementById('modal-add-rate-item');
+  if (modal) modal.classList.add('hidden');
+}
+
+function calcFormMargin() {
+  const buy = parseFloat(document.getElementById('rate-form-buy')?.value) || 0;
+  const sell = parseFloat(document.getElementById('rate-form-sell')?.value) || 0;
+  const marginRs = Math.max(0, sell - buy);
+  const marginPct = buy > 0 ? (((sell - buy) / buy) * 100).toFixed(1) : 0;
+  const displayEl = document.getElementById('rate-form-margin-display');
+  if (displayEl) {
+    displayEl.textContent = `₹ ${marginRs.toLocaleString('en-IN')} (${marginPct}%)`;
+  }
+}
+
+// Save Rate Item (Add or Update)
+function saveRateItem() {
+  const idVal = document.getElementById('rate-form-id').value;
+  const name = document.getElementById('rate-form-name').value.trim();
+  const hindiName = document.getElementById('rate-form-hindi').value.trim() || name;
+  const category = document.getElementById('rate-form-category').value;
+  const unit = document.getElementById('rate-form-unit').value.trim() || '1';
+  const hsnCode = document.getElementById('rate-form-hsn').value.trim();
+  const buyRate = parseFloat(document.getElementById('rate-form-buy').value) || 0;
+  const sellRate = parseFloat(document.getElementById('rate-form-sell').value) || 0;
+  const supplierName = document.getElementById('rate-form-supplier').value.trim();
+  const notes = document.getElementById('rate-form-notes').value.trim();
+
+  if (!name && !hindiName) {
+    alert(state.currentLang === 'hi' ? 'कृपया सामान का नाम भरें' : 'Please enter item name');
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  let rateObj;
+
+  if (idVal) {
+    const existing = state.rates.find(r => r.id === idVal);
+    if (existing) {
+      const pBuy = buyRate !== existing.buyRate ? existing.buyRate : existing.prevBuyRate;
+      const pSell = sellRate !== existing.sellRate ? existing.sellRate : existing.prevSellRate;
+      rateObj = {
+        ...existing,
+        name,
+        hindiName,
+        category,
+        unit,
+        hsnCode,
+        buyRate,
+        prevBuyRate: pBuy,
+        sellRate,
+        prevSellRate: pSell,
+        supplierName,
+        notes,
+        lastUpdated: todayStr
+      };
+      const idx = state.rates.findIndex(r => r.id === idVal);
+      state.rates[idx] = rateObj;
+    }
+  } else {
+    rateObj = {
+      id: `rate_${Date.now()}`,
+      name,
+      hindiName,
+      category,
+      unit,
+      hsnCode,
+      buyRate,
+      prevBuyRate: buyRate,
+      sellRate,
+      prevSellRate: sellRate,
+      supplierName,
+      notes,
+      lastUpdated: todayStr
+    };
+    state.rates.unshift(rateObj);
+  }
+
+  persistRatesData();
+  closeAddRateItemModal();
+  renderRateListView();
+  showToast(state.currentLang === 'hi' ? `${hindiName} का भाव सुरक्षित हुआ!` : `Rate saved!`);
+
+  fetch('/api/rates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rateObj)
+  }).catch(() => {});
+}
+
+// Delete Rate Item
+function deleteRateItem(id) {
+  const r = state.rates.find(item => item.id === id);
+  if (!r) return;
+
+  const confirmMsg = state.currentLang === 'hi' 
+    ? `क्या आप '${r.hindiName || r.name}' को रेट लिस्ट से हटाना चाहते हैं?` 
+    : `Remove '${r.name}' from rate list?`;
+
+  if (confirm(confirmMsg)) {
+    state.rates = state.rates.filter(item => item.id !== id);
+    persistRatesData();
+    renderRateListView();
+    showToast(state.currentLang === 'hi' ? "सामान हटा दिया गया" : "Item deleted");
+
+    fetch(`/api/rates/${id}`, { method: 'DELETE' }).catch(() => {});
+  }
+}
+
+// Bulk Daily Price Revision Modal
+function openBulkUpdateModal() {
+  const modal = document.getElementById('modal-bulk-update-rates');
+  const tbody = document.getElementById('bulk-update-table-body');
+  if (!modal || !tbody) return;
+
+  state.bulkRatesDraft = JSON.parse(JSON.stringify(state.rates));
+
+  tbody.innerHTML = state.bulkRatesDraft.map(r => {
+    const buy = Number(r.buyRate) || 0;
+    const sell = Number(r.sellRate) || 0;
+    const marginRs = Math.max(0, sell - buy);
+    const marginPct = buy > 0 ? (((sell - buy) / buy) * 100).toFixed(1) : 0;
+
+    return `
+      <tr class="hover:bg-amber-50/50" id="bulk-row-${r.id}">
+        <td class="py-2.5 px-3">
+          <div class="font-black text-gray-900">${r.hindiName || r.name}</div>
+          <div class="text-[11px] text-gray-500 font-semibold">${r.unit} • <span class="text-amber-800">${r.category}</span></div>
+        </td>
+        <td class="py-2.5 px-3 text-right font-bold text-gray-500 text-xs">
+          ₹ ${r.prevBuyRate || buy}
+        </td>
+        <td class="py-2.5 px-3 text-right">
+          <div class="flex items-center justify-end gap-1">
+            <button type="button" onclick="adjustBulkRate('${r.id}', 'buy', -10)" class="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 font-bold text-xs">-10</button>
+            <input 
+              type="number" 
+              step="any" 
+              id="bulk-buy-${r.id}" 
+              value="${buy}" 
+              oninput="recalcBulkMargin('${r.id}')"
+              class="w-24 px-2 py-1 bg-white border-2 border-amber-400 rounded-lg font-black text-sm text-right focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+            <button type="button" onclick="adjustBulkRate('${r.id}', 'buy', 10)" class="w-6 h-6 rounded bg-amber-200 hover:bg-amber-300 font-bold text-xs text-amber-900">+10</button>
+          </div>
+        </td>
+        <td class="py-2.5 px-3 text-right font-bold text-gray-500 text-xs">
+          ₹ ${r.prevSellRate || sell}
+        </td>
+        <td class="py-2.5 px-3 text-right">
+          <div class="flex items-center justify-end gap-1">
+            <button type="button" onclick="adjustBulkRate('${r.id}', 'sell', -10)" class="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 font-bold text-xs">-10</button>
+            <input 
+              type="number" 
+              step="any" 
+              id="bulk-sell-${r.id}" 
+              value="${sell}" 
+              oninput="recalcBulkMargin('${r.id}')"
+              class="w-24 px-2 py-1 bg-white border-2 border-emerald-400 rounded-lg font-black text-sm text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+            <button type="button" onclick="adjustBulkRate('${r.id}', 'sell', 10)" class="w-6 h-6 rounded bg-emerald-200 hover:bg-emerald-300 font-bold text-xs text-emerald-900">+10</button>
+          </div>
+        </td>
+        <td class="py-2.5 px-3 text-right font-black text-emerald-800 text-xs" id="bulk-margin-${r.id}">
+          ₹ ${marginRs} (${marginPct}%)
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  modal.classList.remove('hidden');
+}
+
+function closeBulkUpdateModal() {
+  const modal = document.getElementById('modal-bulk-update-rates');
+  if (modal) modal.classList.add('hidden');
+}
+
+function adjustBulkRate(id, type, delta) {
+  const inputEl = document.getElementById(type === 'buy' ? `bulk-buy-${id}` : `bulk-sell-${id}`);
+  if (inputEl) {
+    const val = (parseFloat(inputEl.value) || 0) + delta;
+    inputEl.value = Math.max(0, val);
+    recalcBulkMargin(id);
+  }
+}
+
+function recalcBulkMargin(id) {
+  const buy = parseFloat(document.getElementById(`bulk-buy-${id}`)?.value) || 0;
+  const sell = parseFloat(document.getElementById(`bulk-sell-${id}`)?.value) || 0;
+  const marginRs = Math.max(0, sell - buy);
+  const marginPct = buy > 0 ? (((sell - buy) / buy) * 100).toFixed(1) : 0;
+  const marginEl = document.getElementById(`bulk-margin-${id}`);
+  if (marginEl) {
+    marginEl.textContent = `₹ ${marginRs} (${marginPct}%)`;
+  }
+}
+
+// Save all updated rates in bulk
+async function saveBulkUpdatedRates() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const payloadRates = [];
+
+  state.bulkRatesDraft.forEach(r => {
+    const buyVal = parseFloat(document.getElementById(`bulk-buy-${r.id}`)?.value) || r.buyRate;
+    const sellVal = parseFloat(document.getElementById(`bulk-sell-${r.id}`)?.value) || r.sellRate;
+
+    const realItem = state.rates.find(item => item.id === r.id);
+    if (realItem) {
+      if (buyVal !== realItem.buyRate) {
+        realItem.prevBuyRate = realItem.buyRate;
+        realItem.buyRate = buyVal;
+      }
+      if (sellVal !== realItem.sellRate) {
+        realItem.prevSellRate = realItem.sellRate;
+        realItem.sellRate = sellVal;
+      }
+      realItem.lastUpdated = todayStr;
+      payloadRates.push({
+        id: realItem.id,
+        buyRate: realItem.buyRate,
+        prevBuyRate: realItem.prevBuyRate,
+        sellRate: realItem.sellRate,
+        prevSellRate: realItem.prevSellRate
+      });
+    }
+  });
+
+  persistRatesData();
+  closeBulkUpdateModal();
+  renderRateListView();
+  playSoundboxChime("दैनिक भाव", 0);
+  showToast(state.currentLang === 'hi' ? "आज के सारे भाव सफलतापूर्वक अपडेट हुए! ⚡" : "All daily rates updated! ⚡");
+
+  try {
+    await fetch('/api/rates/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rates: payloadRates })
+    });
+  } catch (err) {
+    console.log('Bulk sync error:', err);
+  }
+}
+
+// Auto-Sync latest purchase rates from supplier invoices
+async function syncRatesFromSuppliers() {
+  showToast(state.currentLang === 'hi' ? "सप्लायर बिलों से भाव खोज रहे हैं..." : "Syncing rates from supplier bills...");
+
+  try {
+    const res = await fetch('/api/rates/sync-suppliers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) {
+        state.rates = json.data;
+        persistRatesData();
+        renderRateListView();
+        showToast(state.currentLang === 'hi' ? `सप्लायर बिलों से भाव सिंक हो गए! 🔄` : `Rates synced from invoices! 🔄`);
+      }
+    }
+  } catch (err) {
+    showToast("सिंक पूरा हुआ");
+  }
+}
+
+// Print Counter Rate Board for Shop Front
+function printCounterRateBoard() {
+  const printWin = window.open('', '_blank');
+  if (!printWin) {
+    window.print();
+    return;
+  }
+
+  const todayStr = new Date().toLocaleDateString('hi-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  const rowsHtml = state.rates.map((r, i) => `
+    <tr style="border-bottom: 1px solid #ddd; ${i % 2 === 0 ? 'background:#fcfcfc;' : ''}">
+      <td style="padding: 10px 14px; font-weight: 800; font-size: 16px;">${r.hindiName || r.name}</td>
+      <td style="padding: 10px 14px; font-weight: bold; color: #555;">${r.unit}</td>
+      <td style="padding: 10px 14px; font-weight: 900; font-size: 18px; text-align: right; color: #111;">₹ ${(r.sellRate || 0).toLocaleString('en-IN')}</td>
+    </tr>
+  `).join('');
+
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>दुकान भाव बोर्ड - श्री गणेश किराना स्टोर</title>
+        <style>
+          body { font-family: 'Mukta', Arial, sans-serif; padding: 24px; color: #111; }
+          .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 14px; margin-bottom: 18px; }
+          .title { font-size: 28px; font-weight: 900; margin: 0; }
+          .subtitle { font-size: 16px; font-weight: bold; margin: 4px 0; color: #444; }
+          .date { font-size: 14px; font-weight: bold; color: #666; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th { background: #333; color: #fff; padding: 10px 14px; font-size: 14px; text-align: left; }
+          th.right { text-align: right; }
+          .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #ccc; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1 class="title">श्री गणेश किराना स्टोर</h1>
+          <p class="subtitle">आज का दैनिक थोक व फुटकर भाव बोर्ड (Daily Rate Sheet)</p>
+          <p class="date">📅 ${todayStr}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>सामान का नाम (Commodity)</th>
+              <th>पैकिंग / इकाई (Unit)</th>
+              <th class="right">दुकान भाव (Rate ₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+        <div class="footer">
+          दुकान का भाव मंडी अनुसार दैनिक अपडेट होता है | शुद्धता व सही वजन की पूर्ण गारंटी
+        </div>
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+    </html>
+  `);
+  printWin.document.close();
+}
+
+// Share Today's Rate List on WhatsApp to Customers / Caterers
+function shareRatesWhatsApp() {
+  const todayStr = new Date().toLocaleDateString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  // Group by category
+  const grouped = {};
+  state.rates.forEach(r => {
+    const cat = r.category || 'अन्य किराना';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(r);
+  });
+
+  let msg = `*श्री गणेश किराना स्टोर*\n`;
+  msg += `📋 *आज का दैनिक भाव सूची (${todayStr})*\n\n`;
+
+  for (const [cat, items] of Object.entries(grouped)) {
+    msg += `*${cat}:*\n`;
+    items.forEach(it => {
+      msg += `• ${it.hindiName || it.name} (${it.unit}): *₹${it.sellRate}*\n`;
+    });
+    msg += `\n`;
+  }
+
+  msg += `होम डिलीवरी व थोक आर्डर हेतु संपर्क करें!\n`;
+  msg += `📞 9876543210\n`;
+  msg += `_भाव मंडी के अनुसार प्रतिदिन परिवर्तनशील हैं_`;
+
+  const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
