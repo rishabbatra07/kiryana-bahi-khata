@@ -76,11 +76,13 @@
           }
         ],
         "paymentDate": "31 Oct 2026",
-        "freight": 0
+        "freight": 0,
+        "receiptImage": ""
       }
     ],
     "paymentDate": "2026-11-10",
-    "freight": 0
+    "freight": 0,
+    "receiptImage": ""
   },
   {
     "id": "sup_1",
@@ -142,11 +144,13 @@
           }
         ],
         "paymentDate": "02 Nov 2026",
-        "freight": 0
+        "freight": 0,
+        "receiptImage": ""
       }
     ],
     "paymentDate": "2026-11-09",
-    "freight": 0
+    "freight": 0,
+    "receiptImage": ""
   },
   {
     "id": "sup_2",
@@ -225,11 +229,13 @@
           }
         ],
         "paymentDate": "01 Nov 2026",
-        "freight": 0
+        "freight": 0,
+        "receiptImage": ""
       }
     ],
     "paymentDate": "2026-11-08",
-    "freight": 0
+    "freight": 0,
+    "receiptImage": ""
   },
   {
     "id": "sup_1794330750456",
@@ -298,6 +304,7 @@
         "totalPaid": 20000,
         "due": 16125,
         "status": "PARTIAL",
+        "receiptImage": "/uploads/receipt_se_trading_896.jpg",
         "items": [
           {
             "id": "itm_se_1",
@@ -331,6 +338,7 @@
           }
         ]
       }
-    ]
+    ],
+    "receiptImage": ""
   }
 ]

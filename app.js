@@ -391,8 +391,25 @@ let state = {
   expandedSupplierId: "sup_1794330750456", // expanded on Ekansh Traders (S E Trading Co) by default
   activeSupplierForAddItem: null,
   activeSupplierForHistory: null,
+  receiptUpload: {
+    vendorType: 'existing',
+    imageBase64: '',
+    rotation: 0
+  },
+  receiptViewer: {
+    zoom: 1,
+    rotation: 0,
+    imgUrl: '',
+    vendorName: '',
+    billNo: '',
+    billDate: ''
+  },
   suppliers: []
 };
+
+function escapeQuotes(str) {
+  return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
 
 // INITIALIZATION
 window.addEventListener('DOMContentLoaded', () => {
@@ -744,6 +761,7 @@ function switchActiveBill(supplierId, targetInvoiceNo) {
     totalPaid: totals.paid,
     due: totals.due,
     status: totals.status,
+    receiptImage: sup.receiptImage || '',
     items: (sup.items || []).map(i => ({ ...i }))
   };
 
@@ -763,6 +781,7 @@ function switchActiveBill(supplierId, targetInvoiceNo) {
   sup.paidAmount = targetBill.totalPaid || 0;
   sup.paymentDate = targetBill.paymentDate || '';
   sup.paymentMode = targetBill.paymentMode || 'PhonePe / UPI';
+  sup.receiptImage = targetBill.receiptImage || '';
   sup.items = (targetBill.items || []).map(i => ({ ...i }));
 
   state.expandedSupplierId = sup.id;
@@ -911,10 +930,17 @@ function renderDesktopTable(suppliersList) {
         <div class="flex flex-wrap items-center gap-1.5 mt-1 text-xs">
           <span class="px-2 py-0.5 rounded bg-rose-900 text-white font-black shadow-xs">📄 चालू बिल #${sup.invoiceNo || 'N/A'}</span>
           <span class="text-gray-500 font-semibold">📅 ${sup.invoiceDate || 'No date'}</span>
+          ${sup.receiptImage ? `
+            <button type="button" onclick="event.stopPropagation(); viewReceiptImage('${sup.receiptImage}', '${escapeQuotes(sup.name)}', '${sup.invoiceNo || ''}', '${sup.invoiceDate || ''}')" title="पर्ची / रसीद फोटो देखें" class="px-2 py-0.5 rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold border border-indigo-300 transition flex items-center gap-1 shadow-xs cursor-pointer">
+              <i data-lucide="camera" class="w-3.5 h-3.5 text-indigo-700"></i>
+              <span>📷 पर्ची फोटो</span>
+            </button>
+          ` : ''}
           ${otherBills.map(h => `
             <button type="button" onclick="event.stopPropagation(); switchActiveBill('${sup.id}', '${h.invoiceNo}')" title="बिल #${h.invoiceNo} पर स्विच करें" class="px-2 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold border border-amber-300 transition flex items-center gap-1 shadow-xs">
               <i data-lucide="history" class="w-3 h-3 text-amber-800"></i>
               <span>बिल #${h.invoiceNo} (₹${(h.totalBill || 0).toLocaleString('en-IN')})</span>
+              ${h.receiptImage ? `<span class="text-indigo-700 font-black" title="पर्ची फोटो मौजूद">📷</span>` : ''}
             </button>
           `).join('')}
           <span class="text-gray-400">•</span>
@@ -1046,6 +1072,51 @@ function renderDesktopTable(suppliersList) {
                   <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-700"></i>
                   <span>सप्लायर हटाएं</span>
                 </button>
+              </div>
+            </div>
+
+            <!-- RECEIPT / PARCHA PHOTO ATTACHMENT BOX -->
+            <div class="p-3.5 bg-indigo-50/70 border-2 border-indigo-200 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-14 h-14 rounded-xl bg-indigo-100 border border-indigo-300 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                  ${sup.receiptImage ? `
+                    <img src="${sup.receiptImage}" class="w-full h-full object-cover cursor-pointer hover:opacity-85 transition" onclick="viewReceiptImage('${sup.receiptImage}', '${escapeQuotes(sup.name)}', '${sup.invoiceNo || ''}', '${sup.invoiceDate || ''}')" title="बड़ी फोटो देखें">
+                  ` : `
+                    <i data-lucide="camera" class="w-7 h-7 text-indigo-400"></i>
+                  `}
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-black text-indigo-950 uppercase">📷 हाथ की रसीद / पर्ची फोटो (Slip Photo)</span>
+                    ${sup.receiptImage ? `<span class="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300">✓ पर्ची फोटो मौजूद</span>` : `<span class="text-[11px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-300">कोई फोटो नहीं</span>`}
+                  </div>
+                  <p class="text-xs text-indigo-900 font-medium mt-0.5">
+                    ${sup.receiptImage ? `हाथ की पर्ची की फोटो इस बिल (#${sup.invoiceNo || ''}) से जुड़ी है। पूरी रसीद देखने के लिए फोटो पर क्लिक करें।` : `यदि सप्लायर ने हाथ की कच्ची पर्ची दी है, तो यहाँ फोटो खींचकर लगा सकते हैं।`}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 flex-wrap">
+                ${sup.receiptImage ? `
+                  <button type="button" onclick="viewReceiptImage('${sup.receiptImage}', '${escapeQuotes(sup.name)}', '${sup.invoiceNo || ''}', '${sup.invoiceDate || ''}')" class="px-3.5 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-1.5 transition cursor-pointer">
+                    <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
+                    <span>🔍 बड़ी पर्ची देखें</span>
+                  </button>
+                  <label class="px-3 py-1.5 bg-white hover:bg-indigo-100 text-indigo-900 border border-indigo-300 rounded-xl text-xs font-bold cursor-pointer transition flex items-center gap-1.5 shadow-xs">
+                    <i data-lucide="camera" class="w-3.5 h-3.5 text-indigo-600"></i>
+                    <span>फोटो बदलें</span>
+                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="uploadReceiptForSupplier('${sup.id}', event)">
+                  </label>
+                  <button type="button" onclick="removeReceiptImage('${sup.id}')" title="फोटो हटाएं" class="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg transition cursor-pointer">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                ` : `
+                  <label class="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-black cursor-pointer transition flex items-center gap-2 shadow-sm">
+                    <i data-lucide="camera" class="w-4 h-4"></i>
+                    <span>📷 हाथ की पर्ची फोटो लगाएं</span>
+                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="uploadReceiptForSupplier('${sup.id}', event)">
+                  </label>
+                `}
               </div>
             </div>
 
@@ -1310,10 +1381,18 @@ function renderDesktopTable(suppliersList) {
                           सामान: ${(h.items || []).map(i => i.description).slice(0, 2).join(', ')}${(h.items || []).length > 2 ? '...' : ''}
                         </div>
                       </div>
-                      <button type="button" onclick="switchActiveBill('${sup.id}', '${h.invoiceNo}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 hover:text-rose-950 border border-rose-300 rounded-xl text-xs font-black transition shrink-0 flex items-center gap-1">
-                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                        <span>यह बिल खोलें</span>
-                      </button>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        ${h.receiptImage ? `
+                          <button type="button" onclick="viewReceiptImage('${h.receiptImage}', '${escapeQuotes(sup.name)}', '${h.invoiceNo || ''}', '${h.invoiceDate || ''}')" title="पर्ची / रसीद फोटो देखें" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs">
+                            <i data-lucide="camera" class="w-3.5 h-3.5 text-indigo-700"></i>
+                            <span>📷 पर्ची</span>
+                          </button>
+                        ` : ''}
+                        <button type="button" onclick="switchActiveBill('${sup.id}', '${h.invoiceNo}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 hover:text-rose-950 border border-rose-300 rounded-xl text-xs font-black transition flex items-center gap-1">
+                          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                          <span>यह बिल खोलें</span>
+                        </button>
+                      </div>
                     </div>
                   `).join('')}
                 </div>
@@ -1347,10 +1426,15 @@ function renderMobileCards(suppliersList) {
       <div class="flex items-start justify-between gap-2">
         <div onclick="toggleExpandSupplier('${sup.id}')" class="cursor-pointer">
           <h4 class="font-extrabold text-gray-900 text-base leading-tight">${sup.name}</h4>
-          <p class="text-xs text-gray-500 font-semibold mt-0.5">
+          <p class="text-xs text-gray-500 font-semibold mt-0.5 flex flex-wrap items-center gap-1.5">
             <span class="text-rose-900 font-bold bg-rose-50 px-1.5 py-0.5 rounded">${sup.invoiceNo || 'No Inv'}</span> • 
             <span>${sup.invoiceDate || 'No date'}</span> • 
             <span class="text-rose-700">${sup.settlementDay}</span>
+            ${sup.receiptImage ? `
+              <button type="button" onclick="event.stopPropagation(); viewReceiptImage('${sup.receiptImage}', '${escapeQuotes(sup.name)}', '${sup.invoiceNo || ''}', '${sup.invoiceDate || ''}')" class="px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-bold text-[10px] border border-indigo-300 flex items-center gap-0.5 shadow-xs">
+                <span>📷 पर्ची फोटो</span>
+              </button>
+            ` : ''}
           </p>
           ${otherBills.length > 0 ? `
             <div class="flex flex-wrap items-center gap-1 mt-1.5">
@@ -1442,6 +1526,42 @@ function renderMobileCards(suppliersList) {
                 oninput="updateSupplierInvoice('${sup.id}', 'invoiceDate', this.value)"
                 class="w-full px-2 py-1 border rounded text-xs font-bold"
               >
+            </div>
+          </div>
+
+          <!-- Mobile Receipt Photo Box -->
+          <div class="p-2.5 bg-indigo-50/80 border border-indigo-200 rounded-xl flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <div class="w-10 h-10 rounded-lg bg-indigo-100 border border-indigo-300 flex items-center justify-center overflow-hidden shrink-0">
+                ${sup.receiptImage ? `
+                  <img src="${sup.receiptImage}" class="w-full h-full object-cover cursor-pointer" onclick="viewReceiptImage('${sup.receiptImage}', '${escapeQuotes(sup.name)}', '${sup.invoiceNo || ''}', '${sup.invoiceDate || ''}')">
+                ` : `
+                  <i data-lucide="camera" class="w-5 h-5 text-indigo-400"></i>
+                `}
+              </div>
+              <div>
+                <span class="text-xs font-black text-indigo-950 block">📷 कच्ची पर्ची फोटो</span>
+                <span class="text-[10px] text-indigo-700 font-semibold">${sup.receiptImage ? '✓ फोटो सुरक्षित है' : 'कोई पर्ची नहीं जुड़ी'}</span>
+              </div>
+            </div>
+            <div>
+              ${sup.receiptImage ? `
+                <div class="flex items-center gap-1">
+                  <button type="button" onclick="viewReceiptImage('${sup.receiptImage}', '${escapeQuotes(sup.name)}', '${sup.invoiceNo || ''}', '${sup.invoiceDate || ''}')" class="px-2 py-1 bg-indigo-700 text-white rounded-lg text-xs font-bold">
+                    देखें
+                  </button>
+                  <label class="px-2 py-1 bg-white text-indigo-900 border border-indigo-300 rounded-lg text-xs font-bold cursor-pointer">
+                    बदलें
+                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="uploadReceiptForSupplier('${sup.id}', event)">
+                  </label>
+                </div>
+              ` : `
+                <label class="px-2.5 py-1 bg-indigo-700 text-white rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
+                  <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                  <span>फोटो लगाएं</span>
+                  <input type="file" accept="image/*" capture="environment" class="hidden" onchange="uploadReceiptForSupplier('${sup.id}', event)">
+                </label>
+              `}
             </div>
           </div>
 
@@ -1844,8 +1964,13 @@ function saveAndPlaySound(supplierId) {
 
   const currentInvKey = String(sup.invoiceNo || '').trim().toLowerCase();
   const existingIdx = sup.history.findIndex(h => String(h.invoiceNo || '').trim().toLowerCase() === currentInvKey);
+  const prevImg = existingIdx >= 0 ? sup.history[existingIdx].receiptImage : '';
+  historyEntry.receiptImage = sup.receiptImage || prevImg || '';
+
   if (existingIdx >= 0) {
     sup.history[existingIdx] = historyEntry;
+  } else {
+    sup.history.unshift(historyEntry);
   }
 
   persistData();
@@ -1872,6 +1997,7 @@ function saveAndPlaySound(supplierId) {
       paidAmount: totals.paid,
       due: totals.due,
       status: totals.status,
+      receiptImage: sup.receiptImage || '',
       items: sup.items
     })
   }).catch(err => console.log('Offline/sync error:', err));
@@ -1933,6 +2059,12 @@ function openSupplierHistory(supplierId) {
             <span class="text-xs font-black px-2.5 py-1 rounded-full ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
               ${isPaid ? '🟢 पूरा चुकता (Paid)' : `🔴 ₹${rec.due} बकाया (Due)`}
             </span>
+            ${rec.receiptImage ? `
+              <button onclick="viewReceiptImage('${rec.receiptImage}', '${escapeQuotes(sup.name)}', '${rec.invoiceNo || ''}', '${rec.invoiceDate || ''}')" class="px-2.5 py-1 bg-indigo-700 hover:bg-indigo-800 text-white rounded-lg text-xs font-black flex items-center gap-1 shadow-sm transition" title="पर्ची / रसीद फोटो देखें">
+                <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                <span>📷 पर्ची फोटो देखें</span>
+              </button>
+            ` : ''}
             <button onclick="switchActiveBill('${supplierId}', '${rec.invoiceNo}'); closeSupplierHistoryModal();" class="px-2.5 py-1 bg-rose-900 hover:bg-rose-800 text-white rounded-lg text-xs font-black flex items-center gap-1 shadow-sm transition" title="इस बिल को मुख्य टेबल में खोलें और सामान देखें/बदलें">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>यह बिल खोलें</span>
@@ -2172,6 +2304,7 @@ function confirmAddNewBill() {
       totalPaid: totals.paid,
       due: totals.due,
       status: totals.status,
+      receiptImage: sup.receiptImage || '',
       items: (sup.items || []).map(i => ({ ...i }))
     };
 
@@ -2196,6 +2329,7 @@ function confirmAddNewBill() {
         paidAmount: totals.paid,
         due: totals.due,
         status: totals.status,
+        receiptImage: sup.receiptImage || '',
         items: historyEntry.items
       })
     }).catch(err => console.log('Settlement sync error:', err));
@@ -2207,6 +2341,7 @@ function confirmAddNewBill() {
   sup.freight = freight;
   sup.paidAmount = 0;
   sup.paymentDate = '';
+  sup.receiptImage = '';
 
   if (itemsMode === 'keep_template' && sup.items && sup.items.length > 0) {
     sup.items = sup.items.map((it, idx) => ({
@@ -2405,4 +2540,452 @@ function confirmAddItem() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(itmObj)
   }).catch(err => console.log('Offline/sync error:', err));
+}
+
+// =========================================================
+// 8. MANUAL RECEIPT / KACCHI PARCHA UPLOAD & VIEWER
+// =========================================================
+
+// Open Quick Manual Receipt Upload Modal
+function openUploadReceiptModal(supplierId = null) {
+  state.receiptUpload = {
+    vendorType: 'existing',
+    selectedSupplierId: supplierId || (state.suppliers[0] ? state.suppliers[0].id : ''),
+    imageBase64: '',
+    rotation: 0
+  };
+
+  // Populate supplier select
+  const selectEl = document.getElementById('receipt-vendor-select');
+  if (selectEl) {
+    selectEl.innerHTML = state.suppliers.map(s => `
+      <option value="${s.id}" ${s.id === state.receiptUpload.selectedSupplierId ? 'selected' : ''}>
+        ${s.name} (चालू बिल #${s.invoiceNo || 'N/A'})
+      </option>
+    `).join('');
+  }
+
+  // Reset inputs
+  document.getElementById('receipt-new-vendor-name').value = '';
+  document.getElementById('receipt-new-vendor-phone').value = '';
+  document.getElementById('receipt-camera-input').value = '';
+  document.getElementById('receipt-slip-no').value = 'पर्ची #' + Math.floor(10 + Math.random() * 90);
+  document.getElementById('receipt-slip-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('receipt-slip-amount').value = '';
+  document.getElementById('receipt-slip-desc').value = '';
+  document.getElementById('receipt-slip-freight').value = '0';
+  document.getElementById('receipt-slip-paid').value = '0';
+
+  // Reset preview UI
+  document.getElementById('receipt-placeholder-ui').classList.remove('hidden');
+  document.getElementById('receipt-preview-ui').classList.add('hidden');
+  const img = document.getElementById('receipt-preview-img');
+  if (img) {
+    img.src = '';
+    img.style.transform = 'rotate(0deg)';
+  }
+
+  toggleReceiptVendorType('existing');
+  const modal = document.getElementById('modal-upload-receipt');
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function closeUploadReceiptModal() {
+  const modal = document.getElementById('modal-upload-receipt');
+  if (modal) modal.classList.add('hidden');
+}
+
+function toggleReceiptVendorType(type) {
+  state.receiptUpload.vendorType = type;
+  const existingContainer = document.getElementById('receipt-existing-vendor-container');
+  const newContainer = document.getElementById('receipt-new-vendor-container');
+
+  if (type === 'existing') {
+    existingContainer.classList.remove('hidden');
+    newContainer.classList.add('hidden');
+  } else {
+    existingContainer.classList.add('hidden');
+    newContainer.classList.remove('hidden');
+    document.getElementById('receipt-new-vendor-name').focus();
+  }
+}
+
+// Handle file input selection (Camera or Gallery)
+function handleReceiptFileSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const base64 = e.target.result;
+    state.receiptUpload.imageBase64 = base64;
+    state.receiptUpload.rotation = 0;
+
+    const img = document.getElementById('receipt-preview-img');
+    if (img) {
+      img.src = base64;
+      img.style.transform = 'rotate(0deg)';
+    }
+
+    document.getElementById('receipt-placeholder-ui').classList.add('hidden');
+    document.getElementById('receipt-preview-ui').classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  };
+  reader.readAsDataURL(file);
+}
+
+// Rotate image preview by 90 degrees
+function rotateReceiptPreview() {
+  state.receiptUpload.rotation = (state.receiptUpload.rotation + 90) % 360;
+  const img = document.getElementById('receipt-preview-img');
+  if (img) {
+    img.style.transform = `rotate(${state.receiptUpload.rotation}deg)`;
+  }
+}
+
+// Remove image preview
+function removeReceiptPreview() {
+  state.receiptUpload.imageBase64 = '';
+  state.receiptUpload.rotation = 0;
+  document.getElementById('receipt-camera-input').value = '';
+  document.getElementById('receipt-preview-ui').classList.add('hidden');
+  document.getElementById('receipt-placeholder-ui').classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
+// Confirm and Save Manual Receipt
+async function confirmSaveManualReceipt() {
+  const isNew = state.receiptUpload.vendorType === 'new';
+  let supplierId = '';
+  let vendorName = '';
+  let vendorPhone = '';
+
+  if (isNew) {
+    vendorName = document.getElementById('receipt-new-vendor-name').value.trim();
+    if (!vendorName) {
+      alert(state.currentLang === 'hi' ? 'कृपया नये सप्लायर / वेंडर का नाम भरें' : 'Please enter vendor name');
+      return;
+    }
+    vendorPhone = document.getElementById('receipt-new-vendor-phone').value.trim() || '9876543210';
+    supplierId = `sup_${Date.now()}`;
+  } else {
+    supplierId = document.getElementById('receipt-vendor-select').value;
+    const sup = state.suppliers.find(s => s.id === supplierId);
+    if (!sup) {
+      alert(state.currentLang === 'hi' ? 'कृपया सप्लायर चुनें' : 'Please select supplier');
+      return;
+    }
+    vendorName = sup.name;
+    vendorPhone = sup.phone;
+  }
+
+  const slipNo = document.getElementById('receipt-slip-no').value.trim() || ('पर्ची #' + Math.floor(10 + Math.random() * 90));
+  const slipDate = document.getElementById('receipt-slip-date').value || new Date().toISOString().split('T')[0];
+  const slipAmount = parseFloat(document.getElementById('receipt-slip-amount').value) || 0;
+  const slipDesc = document.getElementById('receipt-slip-desc').value.trim() || 'कच्ची पर्ची सामान';
+  const freight = parseFloat(document.getElementById('receipt-slip-freight').value) || 0;
+  const paid = parseFloat(document.getElementById('receipt-slip-paid').value) || 0;
+  const mode = document.getElementById('receipt-slip-mode').value || 'PhonePe / UPI';
+
+  if (slipAmount <= 0 && !state.receiptUpload.imageBase64) {
+    alert(state.currentLang === 'hi' ? 'कृपया पर्ची की कुल रकम दर्ज करें या फोटो अपलोड करें' : 'Please enter slip amount or upload photo');
+    return;
+  }
+
+  // Upload image to server if present
+  let uploadedImageUrl = '';
+  if (state.receiptUpload.imageBase64) {
+    try {
+      const uploadRes = await fetch('/api/upload-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierId,
+          invoiceNo: slipNo,
+          imageBase64: state.receiptUpload.imageBase64
+        })
+      });
+      if (uploadRes.ok) {
+        const upJson = await uploadRes.json();
+        if (upJson.imageUrl) uploadedImageUrl = upJson.imageUrl;
+      }
+    } catch (e) {
+      console.warn('Could not upload image to server disk, using base64 fallback:', e);
+      uploadedImageUrl = state.receiptUpload.imageBase64;
+    }
+    if (!uploadedImageUrl) uploadedImageUrl = state.receiptUpload.imageBase64;
+  }
+
+  const itemObj = {
+    id: `itm_${Date.now()}`,
+    description: slipDesc,
+    hsnCode: '',
+    quantity: '1',
+    rateWoGst: Math.round(slipAmount * 100 / 105 * 100) / 100,
+    gstPercent: 5,
+    rateWithGst: slipAmount,
+    totalAmount: slipAmount
+  };
+
+  if (isNew) {
+    const newSup = {
+      id: supplierId,
+      name: vendorName,
+      phone: vendorPhone,
+      settlementDay: 'शनिवार (Saturday)',
+      invoiceNo: slipNo,
+      invoiceDate: slipDate,
+      paymentDate: paid > 0 ? slipDate : '',
+      freight: freight,
+      paidAmount: paid,
+      paymentMode: mode,
+      receiptImage: uploadedImageUrl,
+      items: [itemObj],
+      history: []
+    };
+    state.suppliers.unshift(newSup);
+    state.expandedSupplierId = newSup.id;
+
+    // Sync new supplier to server
+    fetch('/api/suppliers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSup)
+    }).catch(err => console.log('Offline/sync error:', err));
+  } else {
+    const sup = state.suppliers.find(s => s.id === supplierId);
+    if (sup) {
+      // Archive current active bill if different
+      if (sup.invoiceNo && String(sup.invoiceNo).trim().toLowerCase() !== String(slipNo).trim().toLowerCase()) {
+        const totals = getSupplierTotals(sup);
+        const startOfWeek = new Date();
+        startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        const formatDate = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const weekLabel = `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
+
+        const histEntry = {
+          id: `hist_${supplierId}_${Date.now()}`,
+          invoiceNo: sup.invoiceNo,
+          invoiceDate: sup.invoiceDate,
+          paymentDate: sup.paymentDate || '',
+          freight: sup.freight || 0,
+          weekLabel,
+          settledDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          paymentMode: sup.paymentMode || 'PhonePe / UPI',
+          totalBill: totals.bill,
+          totalPaid: totals.paid,
+          due: totals.due,
+          status: totals.status,
+          receiptImage: sup.receiptImage || '',
+          items: (sup.items || []).map(i => ({ ...i }))
+        };
+
+        if (!sup.history) sup.history = [];
+        sup.history = sup.history.filter(h => String(h.invoiceNo).trim().toLowerCase() !== String(histEntry.invoiceNo).trim().toLowerCase());
+        sup.history.unshift(histEntry);
+      }
+
+      sup.invoiceNo = slipNo;
+      sup.invoiceDate = slipDate;
+      sup.freight = freight;
+      sup.paidAmount = paid;
+      sup.paymentDate = paid > 0 ? slipDate : '';
+      sup.paymentMode = mode;
+      if (uploadedImageUrl) sup.receiptImage = uploadedImageUrl;
+      sup.items = [itemObj];
+      state.expandedSupplierId = sup.id;
+
+      // Sync settlement to server
+      fetch('/api/settlements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierId: sup.id,
+          invoiceNo: sup.invoiceNo,
+          invoiceDate: sup.invoiceDate,
+          paymentDate: sup.paymentDate,
+          freight: sup.freight,
+          weekLabel: 'Current Week',
+          settledDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          paymentMode: sup.paymentMode,
+          totalBill: slipAmount + freight,
+          paidAmount: paid,
+          due: Math.max(0, (slipAmount + freight) - paid),
+          status: paid >= (slipAmount + freight) ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'UNPAID'),
+          receiptImage: sup.receiptImage || '',
+          items: sup.items
+        })
+      }).catch(err => console.log('Offline/sync error:', err));
+    }
+  }
+
+  persistData();
+  closeUploadReceiptModal();
+  renderView();
+  playSoundboxChime(vendorName.split('(')[0].trim(), paid);
+  showToast(state.currentLang === 'hi' ? `हाथ की पर्ची व हिसाब सुरक्षित हुआ! 📷` : `Manual receipt and ledger saved! 📷`);
+}
+
+// Upload receipt directly for a specific active bill from expanded view
+async function uploadReceiptForSupplier(supplierId, event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const sup = state.suppliers.find(s => s.id === supplierId);
+  if (!sup) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64 = e.target.result;
+    showToast(state.currentLang === 'hi' ? "फोटो अपलोड हो रही है..." : "Uploading receipt photo...");
+
+    let uploadedUrl = base64;
+    try {
+      const res = await fetch('/api/upload-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierId,
+          invoiceNo: sup.invoiceNo || '',
+          imageBase64: base64
+        })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.imageUrl) uploadedUrl = json.imageUrl;
+      }
+    } catch (err) {
+      console.warn('Server upload error, using local base64:', err);
+    }
+
+    sup.receiptImage = uploadedUrl;
+    if (sup.invoiceNo && sup.history) {
+      const invKey = String(sup.invoiceNo).trim().toLowerCase();
+      const h = sup.history.find(h => String(h.invoiceNo || '').trim().toLowerCase() === invKey);
+      if (h) h.receiptImage = uploadedUrl;
+    }
+
+    persistData();
+    renderView();
+    showToast(state.currentLang === 'hi' ? "📷 पर्ची फोटो सुरक्षित हो गई!" : "Receipt photo saved! 📷");
+  };
+  reader.readAsDataURL(file);
+}
+
+// Remove attached receipt photo from supplier active bill
+function removeReceiptImage(supplierId) {
+  const sup = state.suppliers.find(s => s.id === supplierId);
+  if (!sup) return;
+
+  const confirmMsg = state.currentLang === 'hi'
+    ? `क्या आप इस बिल (#${sup.invoiceNo || ''}) से पर्ची फोटो हटाना चाहते हैं?`
+    : `Remove receipt photo from invoice #${sup.invoiceNo || ''}?`;
+
+  if (confirm(confirmMsg)) {
+    sup.receiptImage = '';
+    persistData();
+    renderView();
+    showToast(state.currentLang === 'hi' ? "पर्ची फोटो हटा दी गई" : "Receipt photo removed");
+
+    // Sync update to server
+    fetch('/api/suppliers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sup)
+    }).catch(() => {});
+  }
+}
+
+// Full-screen Receipt Viewer Controls
+function viewReceiptImage(imgUrl, vendorName, billNo, billDate) {
+  if (!imgUrl) return;
+
+  state.receiptViewer = {
+    zoom: 1,
+    rotation: 0,
+    imgUrl,
+    vendorName: vendorName || 'सप्लायर रसीद फोटो',
+    billNo: billNo || '',
+    billDate: billDate || ''
+  };
+
+  document.getElementById('viewer-vendor-name').textContent = state.receiptViewer.vendorName;
+  document.getElementById('viewer-bill-details').textContent = 
+    (billNo ? `बिल / पर्ची #${billNo}` : '') + (billDate ? ` • ${billDate}` : '');
+  
+  const imgEl = document.getElementById('viewer-img');
+  imgEl.src = imgUrl;
+  imgEl.style.transform = 'scale(1) rotate(0deg)';
+
+  const downloadLink = document.getElementById('viewer-download-link');
+  downloadLink.href = imgUrl;
+  downloadLink.download = `receipt_${String(billNo || 'parcha').replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
+
+  document.getElementById('modal-view-receipt').classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeReceiptViewer() {
+  document.getElementById('modal-view-receipt').classList.add('hidden');
+}
+
+function zoomReceipt(delta) {
+  state.receiptViewer.zoom = Math.max(0.4, Math.min(4.0, state.receiptViewer.zoom + delta));
+  const imgEl = document.getElementById('viewer-img');
+  if (imgEl) {
+    imgEl.style.transform = `scale(${state.receiptViewer.zoom}) rotate(${state.receiptViewer.rotation}deg)`;
+  }
+}
+
+function rotateReceipt(deg) {
+  state.receiptViewer.rotation = (state.receiptViewer.rotation + deg) % 360;
+  const imgEl = document.getElementById('viewer-img');
+  if (imgEl) {
+    imgEl.style.transform = `scale(${state.receiptViewer.zoom}) rotate(${state.receiptViewer.rotation}deg)`;
+  }
+}
+
+function resetReceiptView() {
+  state.receiptViewer.zoom = 1;
+  state.receiptViewer.rotation = 0;
+  const imgEl = document.getElementById('viewer-img');
+  if (imgEl) {
+    imgEl.style.transform = 'scale(1) rotate(0deg)';
+  }
+}
+
+function printReceiptImage() {
+  const imgUrl = state.receiptViewer.imgUrl;
+  if (!imgUrl) return;
+
+  const printWin = window.open('', '_blank');
+  if (!printWin) {
+    window.print();
+    return;
+  }
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>प्रिंट पर्ची - ${state.receiptViewer.vendorName}</title>
+        <style>
+          body { margin: 0; padding: 20px; font-family: sans-serif; text-align: center; }
+          h2 { margin: 0 0 5px; color: #111; }
+          p { margin: 0 0 15px; color: #666; font-size: 14px; }
+          img { max-width: 95%; max-height: 85vh; border: 1px solid #ddd; border-radius: 8px; }
+        </style>
+      </head>
+      <body>
+        <h2>${state.receiptViewer.vendorName}</h2>
+        <p>${state.receiptViewer.billNo ? 'बिल/पर्ची #' + state.receiptViewer.billNo : ''} ${state.receiptViewer.billDate ? ' • ' + state.receiptViewer.billDate : ''}</p>
+        <img src="${imgUrl}" onload="setTimeout(() => { window.print(); window.close(); }, 300);" />
+      </body>
+    </html>
+  `);
+  printWin.document.close();
 }

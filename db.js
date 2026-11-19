@@ -232,6 +232,7 @@ const SEED_SUPPLIERS = [
         totalPaid: 20000,
         due: 16125,
         status: "PARTIAL",
+        receiptImage: "/uploads/receipt_se_trading_896.jpg",
         items: [
           { description: "Mustard Oil 15 Kg Tin First", quantity: "5 TIN", rateWoGst: 2761.90, gstPercent: 5, totalAmount: 14500 },
           { description: "Refind Soya Oil 15 Kg Tin First", quantity: "5 TIN", rateWoGst: 2361.90, gstPercent: 5, totalAmount: 12400 },
@@ -267,6 +268,7 @@ async function initDatabase() {
       );
       ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS payment_date VARCHAR(50) DEFAULT '';
       ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS freight NUMERIC(12, 2) DEFAULT 0;
+      ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS receipt_image TEXT DEFAULT '';
     `);
 
     // 2. Create Items table with Qty, Rate Wo GST, GST %, Rate With GST, Total Amount
@@ -304,10 +306,12 @@ async function initDatabase() {
         due NUMERIC(12, 2) DEFAULT 0,
         status VARCHAR(20) DEFAULT 'PAID',
         items_json JSONB DEFAULT '[]',
+        receipt_image TEXT DEFAULT '',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
       ALTER TABLE weekly_history ADD COLUMN IF NOT EXISTS payment_date VARCHAR(50) DEFAULT '';
       ALTER TABLE weekly_history ADD COLUMN IF NOT EXISTS freight NUMERIC(12, 2) DEFAULT 0;
+      ALTER TABLE weekly_history ADD COLUMN IF NOT EXISTS receipt_image TEXT DEFAULT '';
     `);
 
     // Check if suppliers exist, if not seed default ones
@@ -316,9 +320,9 @@ async function initDatabase() {
       console.log('🌱 Seeding initial suppliers with invoice structure into PostgreSQL...');
       for (const sup of SEED_SUPPLIERS) {
         await client.query(
-          `INSERT INTO suppliers (id, name, phone, settlement_day, invoice_no, invoice_date, payment_date, freight, paid_amount, payment_mode) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [sup.id, sup.name, sup.phone, sup.settlementDay, sup.invoiceNo, sup.invoiceDate, sup.paymentDate || '', sup.freight || 0, sup.paidAmount, sup.paymentMode]
+          `INSERT INTO suppliers (id, name, phone, settlement_day, invoice_no, invoice_date, payment_date, freight, paid_amount, payment_mode, receipt_image) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [sup.id, sup.name, sup.phone, sup.settlementDay, sup.invoiceNo, sup.invoiceDate, sup.paymentDate || '', sup.freight || 0, sup.paidAmount, sup.paymentMode, sup.receiptImage || '']
         );
         for (const itm of sup.items) {
           await client.query(
@@ -330,9 +334,9 @@ async function initDatabase() {
         for (const hist of (sup.history || [])) {
           await client.query(
             `INSERT INTO weekly_history 
-             (id, supplier_id, invoice_no, invoice_date, payment_date, freight, week_label, settled_date, payment_mode, total_bill, total_paid, due, status, items_json) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-            [hist.id, sup.id, hist.invoiceNo, hist.invoiceDate, hist.paymentDate || hist.settledDate || '', hist.freight || 0, hist.weekLabel, hist.settledDate, hist.paymentMode, hist.totalBill, hist.totalPaid, hist.due, hist.status, JSON.stringify(hist.items)]
+             (id, supplier_id, invoice_no, invoice_date, payment_date, freight, week_label, settled_date, payment_mode, total_bill, total_paid, due, status, items_json, receipt_image) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            [hist.id, sup.id, hist.invoiceNo, hist.invoiceDate, hist.paymentDate || hist.settledDate || '', hist.freight || 0, hist.weekLabel, hist.settledDate, hist.paymentMode, hist.totalBill, hist.totalPaid, hist.due, hist.status, JSON.stringify(hist.items), hist.receiptImage || '']
           );
         }
       }
